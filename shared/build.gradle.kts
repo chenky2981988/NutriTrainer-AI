@@ -96,6 +96,11 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.ktor.client.mock)
         }
+        // JVM host tests: an in-memory JDBC SQLite driver so the data layer is
+        // exercised for real without an Android/iOS device.
+        getByName("androidHostTest").dependencies {
+            implementation(libs.sqldelight.sqlite.driver)
+        }
     }
 }
 

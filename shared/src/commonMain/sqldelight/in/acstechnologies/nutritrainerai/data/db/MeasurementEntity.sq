@@ -1,0 +1,33 @@
+-- Body measurements for Progress: 7-day weight average, waist, and later BMI /
+-- BCA (PRD §4.4). Weight is nullable because a row may record only waist.
+CREATE TABLE measurementEntity (
+    id                    TEXT NOT NULL PRIMARY KEY,
+    takenEpochDay         INTEGER NOT NULL,
+    weightKg              REAL,
+    waistCm               REAL,
+    conditionsNote        TEXT,                    -- "morning, fasted" — BCA comparability (PRD §4.4)
+    source                TEXT NOT NULL,           -- MANUAL | HEALTH_CONNECT | HEALTHKIT | WEARABLE
+    createdAtEpochMillis  INTEGER NOT NULL
+);
+
+CREATE INDEX measurementEntity_day ON measurementEntity(takenEpochDay);
+
+selectAll:
+SELECT *
+FROM measurementEntity
+ORDER BY takenEpochDay, createdAtEpochMillis;
+
+selectWeightsSince:
+SELECT takenEpochDay, weightKg
+FROM measurementEntity
+WHERE weightKg IS NOT NULL AND takenEpochDay >= :sinceEpochDay
+ORDER BY takenEpochDay;
+
+upsert:
+INSERT OR REPLACE INTO measurementEntity(
+    id, takenEpochDay, weightKg, waistCm, conditionsNote, source, createdAtEpochMillis
+)
+VALUES (:id, :takenEpochDay, :weightKg, :waistCm, :conditionsNote, :source, :createdAtEpochMillis);
+
+deleteById:
+DELETE FROM measurementEntity WHERE id = :id;

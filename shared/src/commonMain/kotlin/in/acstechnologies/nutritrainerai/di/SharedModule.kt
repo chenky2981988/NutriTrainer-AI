@@ -5,6 +5,12 @@ import `in`.acstechnologies.nutritrainerai.ai.parser.DeterministicNutritionParse
 import `in`.acstechnologies.nutritrainerai.data.db.DatabaseDriverFactory
 import `in`.acstechnologies.nutritrainerai.data.db.NutriDb
 import `in`.acstechnologies.nutritrainerai.data.db.createNutriDb
+import `in`.acstechnologies.nutritrainerai.data.meallog.SqlDelightMealLogRepository
+import `in`.acstechnologies.nutritrainerai.data.measurement.SqlDelightMeasurementRepository
+import `in`.acstechnologies.nutritrainerai.domain.repository.MealLogRepository
+import `in`.acstechnologies.nutritrainerai.domain.repository.MeasurementRepository
+import `in`.acstechnologies.nutritrainerai.domain.usecase.GetWeightTrendUseCase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.Json
 import org.koin.core.module.Module
 import org.koin.core.qualifier.named
@@ -33,4 +39,10 @@ val sharedModule: Module = module {
     // The model-free fallback engine. Platform modules add their on-device engine
     // (Gemini Nano / Apple Foundation Models) and the selection logic on top.
     single<NutritionLanguageEngine>(DeterministicEngine) { DeterministicNutritionParser() }
+
+    // Data layer — DB work runs on the default dispatcher.
+    single<MealLogRepository> { SqlDelightMealLogRepository(get(), Dispatchers.Default) }
+    single<MeasurementRepository> { SqlDelightMeasurementRepository(get(), Dispatchers.Default) }
+
+    factory { GetWeightTrendUseCase(get()) }
 }
