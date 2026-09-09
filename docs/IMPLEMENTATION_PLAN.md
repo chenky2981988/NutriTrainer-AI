@@ -431,15 +431,15 @@ claims + store health declarations.
 7. Test Coach→Today corrections with 10 target users.
 8. Benchmark KMP storage, speech, and inference on representative devices.
 
-**In this repo (engineering foundation, can start immediately):**
-1. Add dependencies to `gradle/libs.versions.toml`: SQLDelight, kotlinx-serialization, kotlinx-coroutines, kotlinx-datetime, Ktor client, a DI solution (Koin or manual).
-2. Create packages `domain/`, `data/`, `ai/`, `ui/` in `:shared`; wire the dependency direction; add ktlint or detekt.
-3. Model `NutrientVector`, `Quantity`, `ConfidenceBand`, `SourceRef` + the core entities in `domain/`, with golden unit tests for every calculation in §4.
-4. Define `NutritionIntent` / response schema (versioned, `kotlinx.serialization`) and the `NutritionLanguageEngine` interface in `ai/`, plus a schema validator.
-5. Build the deterministic parser fallback first (no model dependency) so Prototype can run without on-device LLMs.
-6. SQLDelight schema for the core entities + the offline-first repository layer; migration test harness.
-7. Onboarding OB-01…OB-10 as Compose screens over `OnboardingState`, with the full 28+8 state/UT index bundled offline.
-8. Coach composer + Today screen sharing one repository; assert Coach and Today totals match in tests.
+**In this repo (engineering foundation):**
+1. ✅ Deps in `gradle/libs.versions.toml`: coroutines 1.9.0, kotlinx-serialization 1.7.3 (+plugin), kotlinx-datetime 0.7.1 wired into commonMain; Koin 4.0.2, Ktor 3.0.3, SQLDelight 2.0.2 wired and verified (shared tests + iOS compile + Android APK). Versions aligned to Compose MP's transitive set. **DI = Koin, storage = SQLDelight.**
+2. ◐ Packages `domain/model`, `domain/calc`, `ai/`, `data/db`, `di/` created with the dependency direction (`ai → domain`, `data → domain`). Still to do: `ui/`, ktlint/detekt.
+3. ✅ `NutrientVector`, `Quantity`, `ConfidenceBand`/`Ranged`, `SourceType`/`SourceRef`, `MeasurementBasis`, `MealItemStatus`; `NutritionMath` (ingredient/recipe-serving/BMI/daily-consumed/rolling-weight). 19 golden tests. Core *entities* (UserProfile, Food, Recipe, MealItem…) still to model.
+4. ✅ `NutritionIntent` schema (versioned) + `IntentKind`/`ParsedItem`/`Clarification`, `NutritionLanguageEngine` + `InterpretRequest`/`InterpretResult`, `NutritionIntentValidator`. 12 validator tests.
+5. ⬜ Deterministic parser fallback (`ai/` — no model dependency) so Prototype runs without on-device LLMs.
+6. ◐ SQLDelight `NutriDb` created (`MealItemEntity.sq`), `DatabaseDriverFactory` expect/actual (Android/iOS), `sharedModule` Koin graph. Still to do: full entity schema, repository layer, migration test harness, in-memory JVM driver for tests.
+7. ⬜ Onboarding OB-01…OB-10 as Compose screens over `OnboardingState`, with the full 28+8 state/UT index bundled offline.
+8. ⬜ Coach composer + Today screen sharing one repository; assert Coach and Today totals match in tests.
 
 ---
 

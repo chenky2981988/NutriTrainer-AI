@@ -1,0 +1,50 @@
+import kotlin.Boolean;
+
+-- One logged meal item. Consumed vs planned is a status string so the two
+-- never blur (PRD §4.3). Nutrition is denormalised onto the row: it is the
+-- result of a specific calculationVersion and must not silently recompute.
+CREATE TABLE mealItemEntity (
+    id                   TEXT NOT NULL PRIMARY KEY,
+    dayEpochDay          INTEGER NOT NULL,
+    status               TEXT NOT NULL,            -- CONSUMED | PLANNED
+    confirmed            INTEGER AS Boolean NOT NULL DEFAULT 0,
+    foodName             TEXT NOT NULL,
+    quantityGrams        REAL,
+    energyKcal           REAL NOT NULL,
+    energyKj             REAL NOT NULL,
+    proteinG             REAL NOT NULL,
+    carbohydrateG        REAL NOT NULL,
+    fatG                 REAL NOT NULL,
+    fibreG               REAL NOT NULL,
+    confidenceBand       TEXT NOT NULL,
+    sourceType           TEXT NOT NULL,
+    revision             INTEGER NOT NULL DEFAULT 1,
+    calculationVersion   INTEGER NOT NULL,
+    createdAtEpochMillis  INTEGER NOT NULL,
+    deletedAtEpochMillis  INTEGER                  -- soft delete + undo (PRD FR07)
+);
+
+CREATE INDEX mealItemEntity_day ON mealItemEntity(dayEpochDay);
+
+selectByDay:
+SELECT *
+FROM mealItemEntity
+WHERE dayEpochDay = :dayEpochDay AND deletedAtEpochMillis IS NULL
+ORDER BY createdAtEpochMillis;
+
+upsert:
+INSERT OR REPLACE INTO mealItemEntity(
+    id, dayEpochDay, status, confirmed, foodName, quantityGrams,
+    energyKcal, energyKj, proteinG, carbohydrateG, fatG, fibreG,
+    confidenceBand, sourceType, revision, calculationVersion, createdAtEpochMillis, deletedAtEpochMillis
+)
+VALUES (
+    :id, :dayEpochDay, :status, :confirmed, :foodName, :quantityGrams,
+    :energyKcal, :energyKj, :proteinG, :carbohydrateG, :fatG, :fibreG,
+    :confidenceBand, :sourceType, :revision, :calculationVersion, :createdAtEpochMillis, :deletedAtEpochMillis
+);
+
+softDelete:
+UPDATE mealItemEntity
+SET deletedAtEpochMillis = :deletedAtEpochMillis, revision = revision + 1
+WHERE id = :id;
