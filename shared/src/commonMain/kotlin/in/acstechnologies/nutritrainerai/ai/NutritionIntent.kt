@@ -119,6 +119,13 @@ enum class ClarificationReason {
     /** Allergen interpretation is uncertain. */
     ALLERGEN_UNCERTAIN,
 
+    /**
+     * A CORRECT / REMOVE / REPEAT refers to an existing record the engine could
+     * not pin down (no row id). The resolver may auto-bind when exactly one
+     * recent item matches; otherwise the user picks.
+     */
+    TARGET_AMBIGUOUS,
+
     /** The utterance itself is unclear (pairs with [IntentKind.UNKNOWN]). */
     UTTERANCE_UNCLEAR,
 }

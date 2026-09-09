@@ -436,7 +436,7 @@ claims + store health declarations.
 2. ◐ Packages `domain/model`, `domain/calc`, `ai/`, `data/db`, `di/` created with the dependency direction (`ai → domain`, `data → domain`). Still to do: `ui/`, ktlint/detekt.
 3. ✅ `NutrientVector`, `Quantity`, `ConfidenceBand`/`Ranged`, `SourceType`/`SourceRef`, `MeasurementBasis`, `MealItemStatus`; `NutritionMath` (ingredient/recipe-serving/BMI/daily-consumed/rolling-weight). 19 golden tests. Core *entities* (UserProfile, Food, Recipe, MealItem…) still to model.
 4. ✅ `NutritionIntent` schema (versioned) + `IntentKind`/`ParsedItem`/`Clarification`, `NutritionLanguageEngine` + `InterpretRequest`/`InterpretResult`, `NutritionIntentValidator`. 12 validator tests.
-5. ⬜ Deterministic parser fallback (`ai/` — no model dependency) so Prototype runs without on-device LLMs.
+5. ✅ `DeterministicNutritionParser` — rule-based `NutritionLanguageEngine`, no model dependency, always available. Classifies the 8 intents, extracts items/quantities/units/meal from English, always `LOW` confidence, unparseable → `UNKNOWN` + clarification. `EnglishLexicon` split out for future regional lexicons. 15 tests over the PRD §4.2 / Appendix A examples. Registered in Koin (`DeterministicEngine` qualifier).
 6. ◐ SQLDelight `NutriDb` created (`MealItemEntity.sq`), `DatabaseDriverFactory` expect/actual (Android/iOS), `sharedModule` Koin graph. Still to do: full entity schema, repository layer, migration test harness, in-memory JVM driver for tests.
 7. ⬜ Onboarding OB-01…OB-10 as Compose screens over `OnboardingState`, with the full 28+8 state/UT index bundled offline.
 8. ⬜ Coach composer + Today screen sharing one repository; assert Coach and Today totals match in tests.

@@ -1,10 +1,13 @@
 package `in`.acstechnologies.nutritrainerai.di
 
+import `in`.acstechnologies.nutritrainerai.ai.NutritionLanguageEngine
+import `in`.acstechnologies.nutritrainerai.ai.parser.DeterministicNutritionParser
 import `in`.acstechnologies.nutritrainerai.data.db.DatabaseDriverFactory
 import `in`.acstechnologies.nutritrainerai.data.db.NutriDb
 import `in`.acstechnologies.nutritrainerai.data.db.createNutriDb
 import kotlinx.serialization.json.Json
 import org.koin.core.module.Module
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 /**
@@ -13,6 +16,9 @@ import org.koin.dsl.module
  * The platform entry point must additionally register a [DatabaseDriverFactory]
  * (Android needs a `Context`, iOS does not) before resolving [NutriDb].
  */
+/** DI qualifier for the always-available fallback engine (PRD §8). */
+val DeterministicEngine = named("deterministic")
+
 val sharedModule: Module = module {
     single<NutriDb> { createNutriDb(get<DatabaseDriverFactory>()) }
 
@@ -23,4 +29,8 @@ val sharedModule: Module = module {
             explicitNulls = false
         }
     }
+
+    // The model-free fallback engine. Platform modules add their on-device engine
+    // (Gemini Nano / Apple Foundation Models) and the selection logic on top.
+    single<NutritionLanguageEngine>(DeterministicEngine) { DeterministicNutritionParser() }
 }
