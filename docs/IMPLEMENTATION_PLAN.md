@@ -62,6 +62,68 @@ proven (target: end of Prototype phase).
 
 ---
 
+## 2A. Architecture pattern — Clean layering + MVI
+
+**Decision:** Clean Architecture layering (realized as the modules in §2) with
+**MVI** at the presentation layer. Not plain MVVM — the PRD's central
+requirements make MVI the better fit.
+
+### Why MVI here
+
+| PRD requirement | Consequence |
+|---|---|
+| "Coach and Today are two synchronized views of **one** local record"; "Coach and Today totals match" (meal DoD) | One source of truth (SQLite) exposed as `Flow`; each screen derives an **immutable** state object from it. A single state + pure reducer makes "they always agree" a unit-testable property. |
+| Coach intents: Consumed / Plan / Correct / Remove / Repeat / Ask / Suggest / Finalize (§7) | These *are* Model-View-**Intent**. A sealed `CoachIntent` + reducer is a direct encoding of §4.2. |
+| Corrections **replace** not duplicate; revision history; undo | Unidirectional flow + explicit events + immutable snapshots. Hard to keep correct with imperative setters. |
+| Replaceable AI engine; deterministic calc; versioned schemas | Clean-Architecture boundaries: interfaces in `domain`, implementations in `data` / `ai` / platform. |
+| Offline-first, SQLite is source of truth | Repository pattern over a reactive DB (SQLDelight emits `Flow`). |
+| Compose Multiplatform | Compose is unidirectional data flow + hoisted immutable state — MVI is idiomatic. |
+
+§9's module table **is** a Clean Architecture layering; each layer is a Gradle module.
+
+### Layer responsibilities
+
+| Layer / module | Holds | Never holds |
+|---|---|---|
+| `:shared:domain` | Entities, value objects, **use cases** (interactors), repository *interfaces*, deterministic calculation services, precedence/policy rules | I/O, Android/iOS types, coroutine dispatchers, framework deps |
+| `:shared:data` | Repository *implementations*: SQLDelight (source of truth) + Ktor remote + caches; DB/DTO ↔ domain mapping; provenance | UI state, Compose |
+| `:shared:ai` | `NutritionLanguageEngine` interface, `NutritionIntent`/response schemas, validators, corpus runner | Prose generation of nutrition facts; direct DB writes |
+| `:shared:ui` | One state holder per screen; design system; navigation | Business rules, SQL, network |
+| platform modules | `actual` impls for speech, on-device LLM, barcode, OCR, health, secure storage | Domain logic |
+
+Dependency direction: `ui → domain ← data`, `ui → ai ← platform`, `data → domain`,
+`ai → domain`. **Nothing depends on `data` or platform except through a `domain`
+interface.**
+
+### MVI contract (presentation layer)
+
+Each screen has a `ViewModel` (KMP `androidx.lifecycle.ViewModel`) exposing:
+
+- `val state: StateFlow<XxxUiState>` — one immutable data class; the entire screen render input.
+- `fun onIntent(intent: XxxIntent)` — the single entry point; `XxxIntent` is a sealed interface; a **pure reducer** `(state, result) -> state` computes the next state.
+- `val effects: Flow<XxxEffect>` — one-off navigation / snackbar / permission-request signals (via `Channel` receiveAsFlow), never part of state.
+
+Use cases are `suspend` (single result) or return `Flow` (streams). The
+`ViewModel` runs them in `viewModelScope`; the domain stays dispatcher-agnostic
+(dispatchers are injected at the data-layer edge).
+
+- **Hand-rolled MVI** — no Orbit / MVIKotlin dependency.
+- Trivial screens (Profile sub-pages) use a thin state holder, not a full reducer. MVI is the consistent pattern, applied pragmatically.
+- **Koin** provides use cases → repositories → ViewModels.
+
+### Testing consequences (matches §8 quality gates)
+
+- Domain: pure unit + golden tests, zero mocks.
+- Presentation: `given intent → assert state sequence` — reducers are trivially testable.
+- "Coach and Today totals match": integration test with an in-memory fake repository feeding both ViewModels.
+
+### Still open
+
+1. **Navigation** — official `androidx.navigation` Compose Multiplatform (leaning yes) vs Decompose. Decide when the first multi-screen flow lands.
+2. **ViewModel sharing** — fully shared in `:shared:ui`; drop to platform only if a screen needs native APIs the abstraction can't cover.
+
+---
+
 ## 3. Domain model (PRD §9 "Core entities")
 
 Implement in `:shared:domain` as immutable Kotlin data classes with stable IDs;

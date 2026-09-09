@@ -29,6 +29,16 @@ Package is `in.acstechnologies.nutritrainerai`. Note `in` is a Kotlin keyword, s
 
 Run from the repo root; the Gradle wrapper is committed.
 
+**JDK:** there may be no system Java on `PATH`. The Gradle *daemon* is pinned to
+JDK 21 via `gradle/gradle-daemon-jvm.properties` (auto-provisioned into
+`~/.gradle/jdks/`), but the *launcher* still needs a JVM. If `./gradlew` reports
+"Unable to locate a Java Runtime", point `JAVA_HOME` at the Android Studio
+bundled JBR:
+
+```bash
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+```
+
 ```bash
 # Android app
 ./gradlew :androidApp:assembleDebug        # build APK
