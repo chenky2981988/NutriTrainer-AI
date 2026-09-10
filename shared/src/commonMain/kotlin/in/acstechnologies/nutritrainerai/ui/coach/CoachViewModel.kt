@@ -1,0 +1,150 @@
+package `in`.acstechnologies.nutritrainerai.ui.coach
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import `in`.acstechnologies.nutritrainerai.ai.CompactDailySummary
+import `in`.acstechnologies.nutritrainerai.ai.InterpretRequest
+import `in`.acstechnologies.nutritrainerai.ai.InterpretResult
+import `in`.acstechnologies.nutritrainerai.ai.NutritionIntent
+import `in`.acstechnologies.nutritrainerai.ai.NutritionIntentValidator
+import `in`.acstechnologies.nutritrainerai.ai.NutritionLanguageEngine
+import `in`.acstechnologies.nutritrainerai.ai.pipeline.LogOutcome
+import `in`.acstechnologies.nutritrainerai.ai.pipeline.LogParsedIntentUseCase
+import `in`.acstechnologies.nutritrainerai.domain.usecase.DayTotals
+import `in`.acstechnologies.nutritrainerai.domain.usecase.ObserveDayUseCase
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+
+/** One exchange in the Coach transcript. Kept to PRD §4.2's four short beats. */
+data class CoachTurn(
+    val userText: String,
+    val understanding: String,
+    val result: String,
+    val observation: String? = null,
+    val nextAction: String? = null,
+    val needsConfirmation: Boolean = false,
+)
+
+data class CoachUiState(
+    val composerText: String = "",
+    val turns: List<CoachTurn> = emptyList(),
+    /** Same numbers Today shows — both derive from [ObserveDayUseCase]. */
+    val dayTotals: DayTotals = DayTotals.EMPTY,
+    val submitting: Boolean = false,
+)
+
+sealed interface CoachIntent {
+    data class ComposerChanged(val text: String) : CoachIntent
+    data object Submit : CoachIntent
+}
+
+/**
+ * Coach — conversational entry (PRD §4.2). Interprets an utterance with the
+ * [engine], validates, and lands it through [LogParsedIntentUseCase]. Its
+ * running totals come from the *same* [ObserveDayUseCase] stream as Today, so
+ * the two never disagree (PRD §2A).
+ */
+class CoachViewModel(
+    private val engine: NutritionLanguageEngine,
+    private val logUseCase: LogParsedIntentUseCase,
+    observeDay: ObserveDayUseCase,
+    private val dayEpochDay: Long,
+) : ViewModel() {
+
+    private val composer = MutableStateFlow("")
+    private val turns = MutableStateFlow<List<CoachTurn>>(emptyList())
+    private val submitting = MutableStateFlow(false)
+
+    private val dayTotals: StateFlow<DayTotals> =
+        observeDay.observe(dayEpochDay)
+            .map { it.totals }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, DayTotals.EMPTY)
+
+    val state: StateFlow<CoachUiState> =
+        combine(composer, turns, dayTotals, submitting) { text, log, totals, busy ->
+            CoachUiState(composerText = text, turns = log, dayTotals = totals, submitting = busy)
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, CoachUiState())
+
+    fun onIntent(intent: CoachIntent) {
+        when (intent) {
+            is CoachIntent.ComposerChanged -> composer.value = intent.text
+            CoachIntent.Submit -> submit()
+        }
+    }
+
+    private fun submit() {
+        val text = composer.value.trim()
+        if (text.isEmpty() || submitting.value) return
+        composer.value = ""
+        submitting.value = true
+        viewModelScope.launch {
+            try {
+                turns.update { it + runTurn(text) }
+            } finally {
+                submitting.value = false
+            }
+        }
+    }
+
+    private suspend fun runTurn(text: String): CoachTurn {
+        val totals = dayTotals.value
+        val request = InterpretRequest(
+            utterance = text,
+            dailySummary = CompactDailySummary(
+                consumedKcal = totals.consumed.energyKcal,
+                consumedProteinG = totals.consumed.proteinG,
+                mealsLogged = totals.consumedItemCount,
+            ),
+        )
+        return when (val result = engine.interpret(request)) {
+            is InterpretResult.Unavailable ->
+                CoachTurn(text, "I couldn't process that", result.reason, needsConfirmation = true)
+
+            is InterpretResult.Invalid ->
+                CoachTurn(text, "I need a bit more", result.violations.joinToString("; "), needsConfirmation = true)
+
+            is InterpretResult.Success -> {
+                val violations = NutritionIntentValidator.validate(result.intent)
+                if (violations.isNotEmpty()) {
+                    CoachTurn(text, "I need a bit more", violations.joinToString("; "), needsConfirmation = true)
+                } else {
+                    logUseCase.log(result.intent, dayEpochDay).toTurn(text, result.intent)
+                }
+            }
+        }
+    }
+
+    private fun LogOutcome.toTurn(text: String, intent: NutritionIntent): CoachTurn {
+        val addedKcal = created.sumOf { it.nutrients.energyKcal }.roundToInt()
+        val understanding = when {
+            replaced.isNotEmpty() -> "Updated ${replaced.joinToString { it.foodName }}"
+            removedIds.isNotEmpty() -> "Removed ${removedIds.size} item(s)"
+            created.isNotEmpty() -> "Logged ${created.joinToString { it.foodName }}"
+            else -> "No change (${intent.kind})"
+        }
+        val result = when {
+            created.isNotEmpty() -> "+$addedKcal kcal"
+            replaced.isNotEmpty() -> "recalculated"
+            else -> "—"
+        }
+        val observation = when {
+            unresolvedFoods.isNotEmpty() -> "I couldn't identify ${unresolvedFoods.joinToString()} — tap to set it."
+            unmatched.isNotEmpty() -> note
+            else -> null
+        }
+        return CoachTurn(
+            userText = text,
+            understanding = understanding,
+            result = result,
+            observation = observation,
+            needsConfirmation = unresolvedFoods.isNotEmpty() || unmatched.isNotEmpty(),
+        )
+    }
+}

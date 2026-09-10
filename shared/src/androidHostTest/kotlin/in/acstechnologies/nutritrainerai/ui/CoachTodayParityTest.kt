@@ -1,0 +1,102 @@
+package `in`.acstechnologies.nutritrainerai.ui
+
+import `in`.acstechnologies.nutritrainerai.ai.parser.DeterministicNutritionParser
+import `in`.acstechnologies.nutritrainerai.ai.pipeline.LogParsedIntentUseCase
+import `in`.acstechnologies.nutritrainerai.data.inMemoryNutriDb
+import `in`.acstechnologies.nutritrainerai.data.meallog.SqlDelightMealLogRepository
+import `in`.acstechnologies.nutritrainerai.domain.calc.NutritionMath
+import `in`.acstechnologies.nutritrainerai.domain.model.NutrientVector
+import `in`.acstechnologies.nutritrainerai.domain.resolve.QuantityResolver
+import `in`.acstechnologies.nutritrainerai.domain.resolve.SeedFoodResolver
+import `in`.acstechnologies.nutritrainerai.domain.usecase.ObserveDayUseCase
+import `in`.acstechnologies.nutritrainerai.ui.coach.CoachIntent
+import `in`.acstechnologies.nutritrainerai.ui.coach.CoachViewModel
+import `in`.acstechnologies.nutritrainerai.ui.today.TodayViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+/**
+ * The meal Definition of Done: **Coach and Today totals match** (PRD §2A, §12).
+ * Both ViewModels derive from one [ObserveDayUseCase] stream over one repository,
+ * so any log/correction shows up identically in both.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class CoachTodayParityTest {
+
+    @BeforeTest fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
+
+    @AfterTest fun tearDown() = Dispatchers.resetMain()
+
+    private class World {
+        val day = 20_000L
+        val mealLog = SqlDelightMealLogRepository(inMemoryNutriDb(), Dispatchers.Unconfined)
+        val observe = ObserveDayUseCase(mealLog)
+        private var seq = 0
+        val log = LogParsedIntentUseCase(
+            mealLog = mealLog,
+            foods = SeedFoodResolver(),
+            quantities = QuantityResolver(),
+            now = { 1_000L },
+            idFactory = { "id-${seq++}" },
+        )
+        val coach = CoachViewModel(DeterministicNutritionParser(), log, observe, day)
+        val today = TodayViewModel(observe, day)
+    }
+
+    private fun rice(grams: Double) =
+        NutritionMath.ingredientNutrients(SeedFoodResolver.RICE.nutrientsPerBase, grams)
+
+    private fun dal(grams: Double) =
+        NutritionMath.ingredientNutrients(SeedFoodResolver.DAL.nutrientsPerBase, grams)
+
+    private fun CoachViewModel.say(text: String) {
+        onIntent(CoachIntent.ComposerChanged(text))
+        onIntent(CoachIntent.Submit)
+    }
+
+    @Test
+    fun coachLog_appearsIdenticallyInTodayAndCoach() = runTest {
+        val w = World()
+        w.coach.say("I had 150 g rice and 50 g dal")
+        advanceUntilIdle()
+
+        val expected = rice(150.0) + dal(50.0)
+        assertEquals(expected, w.today.state.value.totals.consumed)
+        assertEquals(w.today.state.value.totals.consumed, w.coach.state.value.dayTotals.consumed)
+        assertEquals(2, w.today.state.value.items.size)
+    }
+
+    @Test
+    fun correction_replacesWithoutDuplicating_bothViewsStayInSync() = runTest {
+        val w = World()
+        w.coach.say("I had 150 g rice")
+        advanceUntilIdle()
+        w.coach.say("rice was 200 g")
+        advanceUntilIdle()
+
+        assertEquals(1, w.mealLog.getDay(w.day).size)
+        assertEquals(rice(200.0), w.coach.state.value.dayTotals.consumed)
+        assertEquals(w.coach.state.value.dayTotals.consumed, w.today.state.value.totals.consumed)
+    }
+
+    @Test
+    fun plannedItemsNeverInflateConsumed_inEitherView() = runTest {
+        val w = World()
+        w.coach.say("I may have 100 g rice")
+        advanceUntilIdle()
+
+        assertEquals(NutrientVector.ZERO, w.today.state.value.totals.consumed)
+        assertEquals(NutrientVector.ZERO, w.coach.state.value.dayTotals.consumed)
+        assertEquals(1, w.today.state.value.totals.plannedItemCount)
+        assertEquals(rice(100.0), w.today.state.value.totals.planned)
+    }
+}

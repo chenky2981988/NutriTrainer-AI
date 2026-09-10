@@ -2,6 +2,15 @@ package `in`.acstechnologies.nutritrainerai.di
 
 import `in`.acstechnologies.nutritrainerai.ai.NutritionLanguageEngine
 import `in`.acstechnologies.nutritrainerai.ai.parser.DeterministicNutritionParser
+import `in`.acstechnologies.nutritrainerai.ai.pipeline.LogParsedIntentUseCase
+import `in`.acstechnologies.nutritrainerai.domain.resolve.FoodResolver
+import `in`.acstechnologies.nutritrainerai.domain.resolve.QuantityResolver
+import `in`.acstechnologies.nutritrainerai.domain.resolve.SeedFoodResolver
+import `in`.acstechnologies.nutritrainerai.domain.usecase.ObserveDayUseCase
+import `in`.acstechnologies.nutritrainerai.ui.coach.CoachViewModel
+import `in`.acstechnologies.nutritrainerai.ui.today.TodayViewModel
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 import `in`.acstechnologies.nutritrainerai.data.db.DatabaseDriverFactory
 import `in`.acstechnologies.nutritrainerai.data.db.NutriDb
 import `in`.acstechnologies.nutritrainerai.data.db.createNutriDb
@@ -28,6 +37,7 @@ import org.koin.dsl.module
 /** DI qualifier for the always-available fallback engine (PRD §8). */
 val DeterministicEngine = named("deterministic")
 
+@OptIn(ExperimentalTime::class)
 val sharedModule: Module = module {
     single<NutriDb> { createNutriDb(get<DatabaseDriverFactory>()) }
 
@@ -50,6 +60,25 @@ val sharedModule: Module = module {
         SqlDelightOnboardingDraftRepository(get(), get(), Dispatchers.Default)
     }
 
+    // Resolution + calculation pipeline (deterministic; no AI in the numbers).
+    single<FoodResolver> { SeedFoodResolver() }
+    single { QuantityResolver() }
+    single { ObserveDayUseCase(get()) }
+    single {
+        LogParsedIntentUseCase(
+            mealLog = get(),
+            foods = get(),
+            quantities = get(),
+            now = { Clock.System.now().toEpochMilliseconds() },
+        )
+    }
+
     factory { GetWeightTrendUseCase(get()) }
     factory { OnboardingViewModel(get()) }
+
+    // Screen ViewModels take the day being viewed as a runtime parameter.
+    factory { (dayEpochDay: Long) -> TodayViewModel(get(), dayEpochDay) }
+    factory { (dayEpochDay: Long) ->
+        CoachViewModel(get(DeterministicEngine), get(), get(), dayEpochDay)
+    }
 }
