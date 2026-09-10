@@ -13,7 +13,7 @@ import `in`.acstechnologies.nutritrainerai.domain.model.SourceType
  */
 class SeedFoodResolver : FoodResolver {
 
-    override fun resolve(foodName: String): ResolvedFood? {
+    override suspend fun resolve(foodName: String): ResolvedFood? {
         val key = foodName.trim().lowercase()
         return TABLE[key] ?: TABLE[ALIASES[key]]
     }

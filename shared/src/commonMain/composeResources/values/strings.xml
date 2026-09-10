@@ -43,6 +43,33 @@
     <string name="library_search_foods">Search foods</string>
     <string name="library_seed_note">Seed data · low confidence. Full catalogue coming.</string>
     <string name="library_kcal_per_100g">%1$d kcal / 100 g</string>
+    <string name="library_add_food">Add a food</string>
+    <string name="library_your_foods">Your foods</string>
+    <string name="library_built_in">Built-in (seed)</string>
+    <string name="nutrient_protein">Protein</string>
+    <string name="nutrient_carbs">Carbs</string>
+    <string name="nutrient_fat">Fat</string>
+    <string name="nutrient_fibre">Fibre</string>
+    <string name="nutrient_grams">%1$s g</string>
+
+    <!-- Add-a-food form -->
+    <string name="addfood_title">Add a food</string>
+    <string name="addfood_unknown_prompt">I couldn't find "%1$s". Add its nutrition so I remember it.</string>
+    <string name="addfood_name">Name</string>
+    <string name="addfood_brand">Brand (optional)</string>
+    <string name="addfood_pack">Pack / size (optional)</string>
+    <string name="addfood_basis">Nutrition is per</string>
+    <string name="addfood_basis_100g">100 g</string>
+    <string name="addfood_basis_100ml">100 ml</string>
+    <string name="addfood_basis_serving">serving</string>
+    <string name="addfood_serving_grams">Serving size (g)</string>
+    <string name="addfood_kcal">Calories (kcal)</string>
+    <string name="addfood_entry_label">How much did you have?</string>
+    <string name="addfood_entry_amount">Amount</string>
+    <string name="addfood_entry_unit">Unit</string>
+    <string name="addfood_save">Save food</string>
+    <string name="addfood_cancel">Cancel</string>
+    <string name="addfood_scan_hint">Label scanning (photo) comes next — enter it manually for now.</string>
 
     <!-- Profile -->
     <string name="profile_title">Profile</string>

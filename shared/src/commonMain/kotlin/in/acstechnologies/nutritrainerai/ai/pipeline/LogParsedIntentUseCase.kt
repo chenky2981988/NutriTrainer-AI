@@ -84,8 +84,8 @@ class LogParsedIntentUseCase(
         val replaced = mutableListOf<MealItem>()
         val unmatched = mutableListOf<String>()
         intent.items.forEachIndexed { index, parsed ->
-            val matches = existing.filter { it.foodName.equals(canonical(parsed.foodName), ignoreCase = true) }
-            val target = matches.singleOrNull()
+            val key = canonical(parsed.foodName)
+            val target = existing.filter { it.foodName.equals(key, ignoreCase = true) }.singleOrNull()
             if (target == null) {
                 unmatched += parsed.foodName
             } else {
@@ -110,9 +110,8 @@ class LogParsedIntentUseCase(
         val removed = mutableListOf<String>()
         val unmatched = mutableListOf<String>()
         intent.items.forEach { parsed ->
-            val target = existing
-                .filter { it.foodName.equals(canonical(parsed.foodName), ignoreCase = true) }
-                .singleOrNull()
+            val key = canonical(parsed.foodName)
+            val target = existing.filter { it.foodName.equals(key, ignoreCase = true) }.singleOrNull()
             if (target == null) unmatched += parsed.foodName else {
                 mealLog.softDelete(target.id, at)
                 removed += target.id
@@ -121,7 +120,7 @@ class LogParsedIntentUseCase(
         return LogOutcome(removedIds = removed, unmatched = unmatched)
     }
 
-    private fun buildItem(
+    private suspend fun buildItem(
         parsed: ParsedItem,
         day: Long,
         status: MealItemStatus,
@@ -160,6 +159,6 @@ class LogParsedIntentUseCase(
         )
     }
 
-    private fun canonical(foodName: String): String =
+    private suspend fun canonical(foodName: String): String =
         foods.resolve(foodName)?.canonicalName ?: foodName
 }

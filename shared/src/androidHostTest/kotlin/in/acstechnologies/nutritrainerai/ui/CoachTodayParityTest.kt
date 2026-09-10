@@ -2,12 +2,15 @@ package `in`.acstechnologies.nutritrainerai.ui
 
 import `in`.acstechnologies.nutritrainerai.ai.parser.DeterministicNutritionParser
 import `in`.acstechnologies.nutritrainerai.ai.pipeline.LogParsedIntentUseCase
+import `in`.acstechnologies.nutritrainerai.data.food.SqlDelightFoodRepository
 import `in`.acstechnologies.nutritrainerai.data.inMemoryNutriDb
 import `in`.acstechnologies.nutritrainerai.data.meallog.SqlDelightMealLogRepository
 import `in`.acstechnologies.nutritrainerai.domain.calc.NutritionMath
 import `in`.acstechnologies.nutritrainerai.domain.model.NutrientVector
+import `in`.acstechnologies.nutritrainerai.domain.resolve.CompositeFoodResolver
 import `in`.acstechnologies.nutritrainerai.domain.resolve.QuantityResolver
 import `in`.acstechnologies.nutritrainerai.domain.resolve.SeedFoodResolver
+import `in`.acstechnologies.nutritrainerai.domain.usecase.AddUserFoodUseCase
 import `in`.acstechnologies.nutritrainerai.domain.usecase.ObserveDayUseCase
 import `in`.acstechnologies.nutritrainerai.ui.coach.CoachIntent
 import `in`.acstechnologies.nutritrainerai.ui.coach.CoachViewModel
@@ -38,17 +41,28 @@ class CoachTodayParityTest {
 
     private class World {
         val day = 20_000L
-        val mealLog = SqlDelightMealLogRepository(inMemoryNutriDb(), Dispatchers.Unconfined)
+        val db = inMemoryNutriDb()
+        val mealLog = SqlDelightMealLogRepository(db, Dispatchers.Unconfined)
+        val foods = SqlDelightFoodRepository(db, Dispatchers.Unconfined)
         val observe = ObserveDayUseCase(mealLog)
         private var seq = 0
+        val quantities = QuantityResolver()
+        val resolver = CompositeFoodResolver(foods, SeedFoodResolver())
         val log = LogParsedIntentUseCase(
             mealLog = mealLog,
-            foods = SeedFoodResolver(),
-            quantities = QuantityResolver(),
+            foods = resolver,
+            quantities = quantities,
             now = { 1_000L },
             idFactory = { "id-${seq++}" },
         )
-        val coach = CoachViewModel(DeterministicNutritionParser(), log, observe, day)
+        val addUserFood = AddUserFoodUseCase(
+            foods = foods,
+            mealLog = mealLog,
+            quantities = quantities,
+            now = { 1_000L },
+            idFactory = { "uf-${seq++}" },
+        )
+        val coach = CoachViewModel(DeterministicNutritionParser(), log, addUserFood, observe, day)
         val today = TodayViewModel(observe, day)
     }
 

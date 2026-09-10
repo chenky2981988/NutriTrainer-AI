@@ -3,12 +3,17 @@ package `in`.acstechnologies.nutritrainerai.di
 import `in`.acstechnologies.nutritrainerai.ai.NutritionLanguageEngine
 import `in`.acstechnologies.nutritrainerai.ai.parser.DeterministicNutritionParser
 import `in`.acstechnologies.nutritrainerai.ai.pipeline.LogParsedIntentUseCase
+import `in`.acstechnologies.nutritrainerai.data.food.SqlDelightFoodRepository
+import `in`.acstechnologies.nutritrainerai.domain.repository.FoodRepository
+import `in`.acstechnologies.nutritrainerai.domain.resolve.CompositeFoodResolver
 import `in`.acstechnologies.nutritrainerai.domain.resolve.FoodResolver
 import `in`.acstechnologies.nutritrainerai.domain.resolve.QuantityResolver
 import `in`.acstechnologies.nutritrainerai.domain.resolve.SeedFoodResolver
+import `in`.acstechnologies.nutritrainerai.domain.usecase.AddUserFoodUseCase
 import `in`.acstechnologies.nutritrainerai.domain.usecase.ObserveDayUseCase
 import `in`.acstechnologies.nutritrainerai.ui.coach.CoachViewModel
 import `in`.acstechnologies.nutritrainerai.ui.today.TodayViewModel
+import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import `in`.acstechnologies.nutritrainerai.data.db.DatabaseDriverFactory
@@ -62,10 +67,12 @@ val sharedModule: Module = module {
         SqlDelightOnboardingDraftRepository(get(), get(), Dispatchers.Default)
     }
     single<AppSettingsRepository> { SqlDelightAppSettingsRepository(get(), Dispatchers.Default) }
+    single<FoodRepository> { SqlDelightFoodRepository(get(), Dispatchers.Default) }
 
     // Resolution + calculation pipeline (deterministic; no AI in the numbers).
     single { SeedFoodResolver() }
-    single<FoodResolver> { get<SeedFoodResolver>() }
+    // User-confirmed foods first (PRD §6 rank 1), then the seed table.
+    single<FoodResolver> { CompositeFoodResolver(get(), get<SeedFoodResolver>()) }
     single { QuantityResolver() }
     single { ObserveDayUseCase(get()) }
     single {
@@ -76,6 +83,15 @@ val sharedModule: Module = module {
             now = { Clock.System.now().toEpochMilliseconds() },
         )
     }
+    factory {
+        AddUserFoodUseCase(
+            foods = get(),
+            mealLog = get(),
+            quantities = get(),
+            now = { Clock.System.now().toEpochMilliseconds() },
+            idFactory = { "uf-" + Clock.System.now().toEpochMilliseconds() + "-" + Random.nextInt(0, 1_000_000) },
+        )
+    }
 
     factory { GetWeightTrendUseCase(get()) }
     factory { OnboardingViewModel(get()) }
@@ -83,6 +99,6 @@ val sharedModule: Module = module {
     // Screen ViewModels take the day being viewed as a runtime parameter.
     factory { (dayEpochDay: Long) -> TodayViewModel(get(), dayEpochDay) }
     factory { (dayEpochDay: Long) ->
-        CoachViewModel(get(DeterministicEngine), get(), get(), dayEpochDay)
+        CoachViewModel(get(DeterministicEngine), get(), get(), get(), dayEpochDay)
     }
 }

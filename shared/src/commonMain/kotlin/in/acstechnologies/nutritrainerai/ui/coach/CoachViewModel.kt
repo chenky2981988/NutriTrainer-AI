@@ -10,7 +10,10 @@ import `in`.acstechnologies.nutritrainerai.ai.NutritionIntentValidator
 import `in`.acstechnologies.nutritrainerai.ai.NutritionLanguageEngine
 import `in`.acstechnologies.nutritrainerai.ai.pipeline.LogOutcome
 import `in`.acstechnologies.nutritrainerai.ai.pipeline.LogParsedIntentUseCase
+import `in`.acstechnologies.nutritrainerai.domain.model.ConfidenceBand
+import `in`.acstechnologies.nutritrainerai.domain.usecase.AddUserFoodUseCase
 import `in`.acstechnologies.nutritrainerai.domain.usecase.DayTotals
+import `in`.acstechnologies.nutritrainerai.domain.usecase.NewFoodDetails
 import `in`.acstechnologies.nutritrainerai.domain.usecase.ObserveDayUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -32,17 +35,30 @@ data class CoachTurn(
     val needsConfirmation: Boolean = false,
 )
 
+/** A logged item the app couldn't identify — the user is asked to teach it. */
+data class PendingFood(
+    val mealItemId: String,
+    val dayEpochDay: Long,
+    val guessedName: String,
+    val guessedAmount: Double,
+    val guessedUnit: String,
+)
+
 data class CoachUiState(
     val composerText: String = "",
     val turns: List<CoachTurn> = emptyList(),
     /** Same numbers Today shows — both derive from [ObserveDayUseCase]. */
     val dayTotals: DayTotals = DayTotals.EMPTY,
     val submitting: Boolean = false,
+    /** Non-null ⇒ show the "add this food" form. */
+    val pendingFood: PendingFood? = null,
 )
 
 sealed interface CoachIntent {
     data class ComposerChanged(val text: String) : CoachIntent
     data object Submit : CoachIntent
+    data class SubmitNewFood(val details: NewFoodDetails) : CoachIntent
+    data object DismissAddFood : CoachIntent
 }
 
 /**
@@ -50,10 +66,15 @@ sealed interface CoachIntent {
  * [engine], validates, and lands it through [LogParsedIntentUseCase]. Its
  * running totals come from the *same* [ObserveDayUseCase] stream as Today, so
  * the two never disagree (PRD §2A).
+ *
+ * When a food can't be resolved it surfaces a [PendingFood]; the user teaches
+ * the app via [CoachIntent.SubmitNewFood], which persists a user-confirmed food
+ * and re-resolves the entry (PRD §6 rank 1, §7 unknown-product workflow).
  */
 class CoachViewModel(
     private val engine: NutritionLanguageEngine,
     private val logUseCase: LogParsedIntentUseCase,
+    private val addUserFood: AddUserFoodUseCase,
     observeDay: ObserveDayUseCase,
     private val dayEpochDay: Long,
 ) : ViewModel() {
@@ -61,6 +82,7 @@ class CoachViewModel(
     private val composer = MutableStateFlow("")
     private val turns = MutableStateFlow<List<CoachTurn>>(emptyList())
     private val submitting = MutableStateFlow(false)
+    private val pendingFood = MutableStateFlow<PendingFood?>(null)
 
     private val dayTotals: StateFlow<DayTotals> =
         observeDay.observe(dayEpochDay)
@@ -68,14 +90,22 @@ class CoachViewModel(
             .stateIn(viewModelScope, SharingStarted.Eagerly, DayTotals.EMPTY)
 
     val state: StateFlow<CoachUiState> =
-        combine(composer, turns, dayTotals, submitting) { text, log, totals, busy ->
-            CoachUiState(composerText = text, turns = log, dayTotals = totals, submitting = busy)
+        combine(composer, turns, dayTotals, submitting, pendingFood) { text, log, totals, busy, pending ->
+            CoachUiState(
+                composerText = text,
+                turns = log,
+                dayTotals = totals,
+                submitting = busy,
+                pendingFood = pending,
+            )
         }.stateIn(viewModelScope, SharingStarted.Eagerly, CoachUiState())
 
     fun onIntent(intent: CoachIntent) {
         when (intent) {
             is CoachIntent.ComposerChanged -> composer.value = intent.text
             CoachIntent.Submit -> submit()
+            CoachIntent.DismissAddFood -> pendingFood.value = null
+            is CoachIntent.SubmitNewFood -> submitNewFood(intent.details)
         }
     }
 
@@ -87,6 +117,37 @@ class CoachViewModel(
         viewModelScope.launch {
             try {
                 turns.update { it + runTurn(text) }
+            } finally {
+                submitting.value = false
+            }
+        }
+    }
+
+    private fun submitNewFood(details: NewFoodDetails) {
+        val pending = pendingFood.value ?: return
+        pendingFood.value = null
+        submitting.value = true
+        viewModelScope.launch {
+            try {
+                val updated = addUserFood.addAndResolve(pending.dayEpochDay, pending.mealItemId, details)
+                turns.update {
+                    it + if (updated != null) {
+                        CoachTurn(
+                            userText = "Added ${details.name}",
+                            understanding = "Saved ${details.name} to your foods",
+                            result = "+${updated.nutrients.energyKcal.roundToInt()} kcal · now counted",
+                            observation = "I'll recognise it next time.",
+                        )
+                    } else {
+                        CoachTurn(
+                            userText = "Added ${details.name}",
+                            understanding = "Saved ${details.name}",
+                            result = "—",
+                            observation = "Couldn't re-apply it to that entry; edit it in Today.",
+                            needsConfirmation = true,
+                        )
+                    }
+                }
             } finally {
                 submitting.value = false
             }
@@ -115,10 +176,26 @@ class CoachViewModel(
                 if (violations.isNotEmpty()) {
                     CoachTurn(text, "I need a bit more", violations.joinToString("; "), needsConfirmation = true)
                 } else {
-                    logUseCase.log(result.intent, dayEpochDay).toTurn(text, result.intent)
+                    val outcome = logUseCase.log(result.intent, dayEpochDay)
+                    queuePendingFood(outcome, result.intent)
+                    outcome.toTurn(text, result.intent)
                 }
             }
         }
+    }
+
+    /** First unresolved item of the log becomes the [PendingFood] prompt. */
+    private fun queuePendingFood(outcome: LogOutcome, intent: NutritionIntent) {
+        if (pendingFood.value != null) return
+        val unresolved = outcome.created.firstOrNull { it.confidence == ConfidenceBand.UNRESOLVED } ?: return
+        val parsed = intent.items.firstOrNull { it.foodName.equals(unresolved.foodName, ignoreCase = true) }
+        pendingFood.value = PendingFood(
+            mealItemId = unresolved.id,
+            dayEpochDay = dayEpochDay,
+            guessedName = unresolved.foodName,
+            guessedAmount = parsed?.quantity?.amount ?: unresolved.quantityGrams ?: 1.0,
+            guessedUnit = parsed?.quantity?.unit ?: "g",
+        )
     }
 
     private fun LogOutcome.toTurn(text: String, intent: NutritionIntent): CoachTurn {
@@ -135,7 +212,7 @@ class CoachViewModel(
             else -> "—"
         }
         val observation = when {
-            unresolvedFoods.isNotEmpty() -> "I couldn't identify ${unresolvedFoods.joinToString()} — tap to set it."
+            unresolvedFoods.isNotEmpty() -> "I couldn't find ${unresolvedFoods.joinToString()} — add its nutrition below."
             unmatched.isNotEmpty() -> note
             else -> null
         }

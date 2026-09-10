@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import `in`.acstechnologies.nutritrainerai.ui.food.AddFoodSheet
 import nutritrainerai.shared.generated.resources.Res
 import nutritrainerai.shared.generated.resources.action_send
 import nutritrainerai.shared.generated.resources.coach_composer_placeholder
@@ -31,7 +32,19 @@ import kotlin.math.roundToInt
 @Composable
 fun CoachScreen(viewModel: CoachViewModel) {
     val state by viewModel.state.collectAsState()
-    CoachContent(state, viewModel::onIntent)
+    val pending = state.pendingFood
+    if (pending != null) {
+        AddFoodSheet(
+            prefillName = pending.guessedName,
+            showEntryAmount = true,
+            prefillAmount = pending.guessedAmount,
+            prefillUnit = pending.guessedUnit,
+            onSave = { viewModel.onIntent(CoachIntent.SubmitNewFood(it)) },
+            onCancel = { viewModel.onIntent(CoachIntent.DismissAddFood) },
+        )
+    } else {
+        CoachContent(state, viewModel::onIntent)
+    }
 }
 
 @Composable

@@ -24,9 +24,12 @@ data class ResolvedFood(
 
 /**
  * Maps a spoken food name to a [ResolvedFood], following the source precedence of
- * PRD §6. Returns `null` when the food cannot be identified — the caller then
- * records an unresolved item that stays out of totals until the user picks.
+ * PRD §6 (user-confirmed first). Returns `null` when the food cannot be
+ * identified — the caller then records an unresolved item that stays out of
+ * totals until the user teaches the app what it is.
+ *
+ * `suspend` because the first tier (user-confirmed foods) is a database lookup.
  */
 interface FoodResolver {
-    fun resolve(foodName: String): ResolvedFood?
+    suspend fun resolve(foodName: String): ResolvedFood?
 }

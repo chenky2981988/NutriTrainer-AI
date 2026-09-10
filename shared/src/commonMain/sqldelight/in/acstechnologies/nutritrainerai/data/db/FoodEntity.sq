@@ -1,0 +1,55 @@
+-- Foods the user has taught the app (PRD §6 rank 1 "user-confirmed"). Later the
+-- content pipeline adds catalogue rows here too, distinguished by `source`.
+CREATE TABLE foodEntity (
+    id                    TEXT NOT NULL PRIMARY KEY,
+    canonicalName         TEXT NOT NULL,
+    nameKey               TEXT NOT NULL,           -- trimmed, lower-cased
+    aliasesCsv            TEXT NOT NULL DEFAULT '',
+    basis                 TEXT NOT NULL,           -- PER_100_G | PER_100_ML | PER_SERVING | PREPARED
+    source                TEXT NOT NULL,
+    confidenceBand        TEXT NOT NULL,
+    brand                 TEXT,
+    pack                  TEXT,
+    servingGrams          REAL,
+    energyKcal            REAL NOT NULL,
+    energyKj              REAL NOT NULL,
+    proteinG              REAL NOT NULL,
+    carbohydrateG         REAL NOT NULL,
+    fatG                  REAL NOT NULL,
+    fibreG                REAL NOT NULL,
+    createdAtEpochMillis  INTEGER NOT NULL
+);
+
+CREATE INDEX foodEntity_nameKey ON foodEntity(nameKey);
+
+selectByNameKey:
+SELECT *
+FROM foodEntity
+WHERE nameKey = :nameKey OR (',' || aliasesCsv || ',') LIKE ('%,' || :nameKey || ',%')
+ORDER BY createdAtEpochMillis DESC
+LIMIT 1;
+
+selectAll:
+SELECT * FROM foodEntity ORDER BY canonicalName;
+
+search:
+SELECT *
+FROM foodEntity
+WHERE nameKey LIKE ('%' || :q || '%') OR aliasesCsv LIKE ('%' || :q || '%')
+ORDER BY canonicalName
+LIMIT 50;
+
+upsert:
+INSERT OR REPLACE INTO foodEntity(
+    id, canonicalName, nameKey, aliasesCsv, basis, source, confidenceBand,
+    brand, pack, servingGrams,
+    energyKcal, energyKj, proteinG, carbohydrateG, fatG, fibreG, createdAtEpochMillis
+)
+VALUES (
+    :id, :canonicalName, :nameKey, :aliasesCsv, :basis, :source, :confidenceBand,
+    :brand, :pack, :servingGrams,
+    :energyKcal, :energyKj, :proteinG, :carbohydrateG, :fatG, :fibreG, :createdAtEpochMillis
+);
+
+deleteById:
+DELETE FROM foodEntity WHERE id = :id;
