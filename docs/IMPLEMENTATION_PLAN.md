@@ -453,7 +453,19 @@ claims + store health declarations.
 - **Device-verified (Motorola Edge 30 / Android 14)** ✅ — full onboarding → home → Coach log → Today → Profile → Settings walked with screenshots. Fixes from that pass: Today `MealRow` layout (kcal text was wrapping one char per line → `weight(1f)` + 2-line ellipsis + "—" for unresolved); Library row same; Progress weight now up to 3 decimals (was rounding 97.25 → 97.3); `\'` in strings.xml rendered literally under Compose resources → replaced with plain `'`. **OB-08 now collects body profile** — Units (Metric kg/cm ↔ Imperial lb/in, converts to cm/kg), age band, height, optional weight. Deterministic parser: run-on logs with no separators ("almond 5 boiled egg 2 white 30 g milk 250") now split at amount boundaries into separate items; food name capped to last 4 words. 114 unit tests.
 - Env note: `linkDebugFrameworkIosSimulatorArm64` needs a full Xcode (this machine has only Command Line Tools — `xcode-select -s /Applications/Xcode.app` fixes it); iOS Kotlin itself compiles.
 
-Next: on-device engines (Gemini Nano / Apple Foundation Models behind `NutritionLanguageEngine`), remaining entities + `.sqm` migrations, real navigation lib, the content pipeline, deeper Progress/Library/Coach UI, a user-profile entity (commit + draft clear on OB-10).
+- **UI tests** ✅ — `androidDeviceTest` wired (`compose ui-test-junit4` + androidx `ui-test-manifest` 1.11.2). `OnboardingHostUiTest` renders the real screen and drives clicks through the real reducer (3 tests). `./gradlew :shared:connectedAndroidDeviceTest` → 86 instrumented tests pass on device.
+
+### Next major piece — "learn a food as you go" (PRD §6 rank 1, §7 unknown-product workflow)
+
+Today there is **no food directory** — only `SeedFoodResolver` (11 hardcoded foods). Unknown foods ("Provilac milk") are stored `UNRESOLVED` at 0 kcal. Target flow:
+
+1. `domain/model/Food` + `FoodRepository` + `foodEntity.sq` — persist user-confirmed foods.
+2. `FoodResolver` checks `FoodRepository` (user-confirmed, `VERY_HIGH`) **before** the seed table — PRD source precedence rank 1.
+3. Coach: an unresolved item produces an actionable turn — "I couldn't find **X**. Add its nutrition?" — opening a manual form (name, basis per 100 g / ml / serving, kcal + macros, brand/pack).
+4. On save → `FoodRepository.upsert(userFood)` + in-place re-resolution of the pending `MealItem` (CORRECT-style) so it now counts.
+5. Fast-follow: `LabelOcr` expect/actual (ML Kit Text Recognition / Apple Vision) + photo picker → prefill the same form for confirmation.
+
+Then: the real content pipeline (Open Food Facts live + USDA / IFCT bulk imports, §7), on-device engines (Gemini Nano / Apple Foundation Models behind `NutritionLanguageEngine`), remaining entities + `.sqm` migrations, real navigation lib, deeper Progress/Library/Coach UI, a committed user-profile entity (draft-clear on OB-10).
 
 ---
 
