@@ -17,6 +17,8 @@ import `in`.acstechnologies.nutritrainerai.data.db.createNutriDb
 import `in`.acstechnologies.nutritrainerai.data.meallog.SqlDelightMealLogRepository
 import `in`.acstechnologies.nutritrainerai.data.measurement.SqlDelightMeasurementRepository
 import `in`.acstechnologies.nutritrainerai.data.onboarding.SqlDelightOnboardingDraftRepository
+import `in`.acstechnologies.nutritrainerai.data.settings.SqlDelightAppSettingsRepository
+import `in`.acstechnologies.nutritrainerai.domain.repository.AppSettingsRepository
 import `in`.acstechnologies.nutritrainerai.domain.repository.MealLogRepository
 import `in`.acstechnologies.nutritrainerai.domain.repository.MeasurementRepository
 import `in`.acstechnologies.nutritrainerai.domain.repository.OnboardingDraftRepository
@@ -59,9 +61,11 @@ val sharedModule: Module = module {
     single<OnboardingDraftRepository> {
         SqlDelightOnboardingDraftRepository(get(), get(), Dispatchers.Default)
     }
+    single<AppSettingsRepository> { SqlDelightAppSettingsRepository(get(), Dispatchers.Default) }
 
     // Resolution + calculation pipeline (deterministic; no AI in the numbers).
-    single<FoodResolver> { SeedFoodResolver() }
+    single { SeedFoodResolver() }
+    single<FoodResolver> { get<SeedFoodResolver>() }
     single { QuantityResolver() }
     single { ObserveDayUseCase(get()) }
     single {

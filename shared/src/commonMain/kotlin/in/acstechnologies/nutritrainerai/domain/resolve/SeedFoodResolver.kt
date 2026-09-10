@@ -18,6 +18,9 @@ class SeedFoodResolver : FoodResolver {
         return TABLE[key] ?: TABLE[ALIASES[key]]
     }
 
+    /** Every seed food, for the Library list until the real catalogue exists. */
+    fun all(): List<ResolvedFood> = TABLE.values.sortedBy { it.canonicalName }
+
     companion object {
         private fun perG(
             name: String,

@@ -19,6 +19,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import nutritrainerai.shared.generated.resources.Res
+import nutritrainerai.shared.generated.resources.action_send
+import nutritrainerai.shared.generated.resources.coach_composer_placeholder
+import nutritrainerai.shared.generated.resources.coach_kcal_so_far
+import nutritrainerai.shared.generated.resources.coach_title
+import nutritrainerai.shared.generated.resources.coach_you_prefix
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
 @Composable
@@ -30,9 +37,9 @@ fun CoachScreen(viewModel: CoachViewModel) {
 @Composable
 private fun CoachContent(state: CoachUiState, onIntent: (CoachIntent) -> Unit) {
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Coach", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(Res.string.coach_title), style = MaterialTheme.typography.headlineSmall)
         Text(
-            "${state.dayTotals.consumed.energyKcal.roundToInt()} kcal so far today",
+            stringResource(Res.string.coach_kcal_so_far, state.dayTotals.consumed.energyKcal.roundToInt()),
             style = MaterialTheme.typography.bodySmall,
         )
 
@@ -48,12 +55,12 @@ private fun CoachContent(state: CoachUiState, onIntent: (CoachIntent) -> Unit) {
                 value = state.composerText,
                 onValueChange = { onIntent(CoachIntent.ComposerChanged(it)) },
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("What did you eat?") },
+                placeholder = { Text(stringResource(Res.string.coach_composer_placeholder)) },
             )
             Button(
                 onClick = { onIntent(CoachIntent.Submit) },
                 enabled = state.composerText.isNotBlank() && !state.submitting,
-            ) { Text("Send") }
+            ) { Text(stringResource(Res.string.action_send)) }
         }
     }
 }
@@ -62,7 +69,10 @@ private fun CoachContent(state: CoachUiState, onIntent: (CoachIntent) -> Unit) {
 private fun TurnCard(turn: CoachTurn) {
     ElevatedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text("You: ${turn.userText}", style = MaterialTheme.typography.bodySmall)
+            Text(
+                stringResource(Res.string.coach_you_prefix, turn.userText),
+                style = MaterialTheme.typography.bodySmall,
+            )
             Text(turn.understanding, fontWeight = FontWeight.Medium)
             Text(turn.result)
             turn.observation?.let { Text(it, style = MaterialTheme.typography.bodySmall) }

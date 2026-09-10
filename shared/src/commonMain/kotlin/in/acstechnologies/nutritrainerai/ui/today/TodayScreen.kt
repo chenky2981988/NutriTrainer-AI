@@ -19,6 +19,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import `in`.acstechnologies.nutritrainerai.domain.model.MealItem
 import `in`.acstechnologies.nutritrainerai.domain.usecase.DayTotals
+import nutritrainerai.shared.generated.resources.Res
+import nutritrainerai.shared.generated.resources.today_consumed
+import nutritrainerai.shared.generated.resources.today_consumed_summary
+import nutritrainerai.shared.generated.resources.today_planned_not_counted
+import nutritrainerai.shared.generated.resources.today_title
+import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
 @Composable
@@ -30,7 +36,7 @@ fun TodayScreen(viewModel: TodayViewModel) {
 @Composable
 private fun TodayContent(state: TodayUiState) {
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Today", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(Res.string.today_title), style = MaterialTheme.typography.headlineSmall)
         TotalsCard(state.totals)
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             items(state.items, key = { it.id }) { item -> MealRow(item) }
@@ -42,15 +48,18 @@ private fun TodayContent(state: TodayUiState) {
 private fun TotalsCard(totals: DayTotals) {
     ElevatedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Consumed", style = MaterialTheme.typography.labelMedium)
+            Text(stringResource(Res.string.today_consumed), style = MaterialTheme.typography.labelMedium)
             Text(
-                "${totals.consumed.energyKcal.roundToInt()} kcal · " +
-                    "${totals.consumed.proteinG.roundToInt()} g protein",
+                stringResource(
+                    Res.string.today_consumed_summary,
+                    totals.consumed.energyKcal.roundToInt(),
+                    totals.consumed.proteinG.roundToInt(),
+                ),
                 fontWeight = FontWeight.SemiBold,
             )
             if (totals.plannedItemCount > 0) {
                 Text(
-                    "Planned (not counted): ${totals.planned.energyKcal.roundToInt()} kcal",
+                    stringResource(Res.string.today_planned_not_counted, totals.planned.energyKcal.roundToInt()),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }

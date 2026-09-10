@@ -3,6 +3,7 @@ package `in`.acstechnologies.nutritrainerai.ui.onboarding
 import `in`.acstechnologies.nutritrainerai.domain.model.AnimalFood
 import `in`.acstechnologies.nutritrainerai.domain.model.BodyProfile
 import `in`.acstechnologies.nutritrainerai.domain.model.FoodPattern
+import `in`.acstechnologies.nutritrainerai.domain.model.HouseholdFoodProfile
 import `in`.acstechnologies.nutritrainerai.domain.model.LanguageMode
 import `in`.acstechnologies.nutritrainerai.domain.model.OnboardingState
 import `in`.acstechnologies.nutritrainerai.domain.model.OnboardingStep
@@ -52,6 +53,8 @@ sealed interface OnboardingIntent {
 
     data class ToggleTradition(val id: String) : OnboardingIntent
     data class SetCustomTraditionText(val text: String) : OnboardingIntent
+
+    data class UpdateHouseholdProfile(val profile: HouseholdFoodProfile) : OnboardingIntent
 
     data class SetGoal(val goal: PrimaryGoal) : OnboardingIntent
     data class UpdateBodyProfile(val body: BodyProfile) : OnboardingIntent

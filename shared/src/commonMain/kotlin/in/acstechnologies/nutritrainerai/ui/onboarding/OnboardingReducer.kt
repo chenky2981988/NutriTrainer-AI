@@ -64,6 +64,9 @@ object OnboardingReducer {
             is OnboardingIntent.SetCustomTraditionText ->
                 current.copy(draft = current.draft.copy(customTraditionText = intent.text))
 
+            is OnboardingIntent.UpdateHouseholdProfile ->
+                current.copy(draft = current.draft.copy(householdProfile = intent.profile))
+
             is OnboardingIntent.SetGoal ->
                 current.copy(draft = current.draft.copy(primaryGoal = intent.goal))
 

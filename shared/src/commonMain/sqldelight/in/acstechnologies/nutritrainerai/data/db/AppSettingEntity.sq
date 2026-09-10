@@ -1,0 +1,12 @@
+-- Key/value store for lightweight per-device UI preferences (theme, remembered
+-- tab, …). Not synced, not part of the health record.
+CREATE TABLE appSettingEntity (
+    key   TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+selectValue:
+SELECT value FROM appSettingEntity WHERE key = :key;
+
+upsert:
+INSERT OR REPLACE INTO appSettingEntity(key, value) VALUES (:key, :value);

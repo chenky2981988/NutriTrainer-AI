@@ -46,11 +46,11 @@ class OnboardingViewModel(
         val (nextState, effect) = OnboardingReducer.reduce(_state.value, intent)
         _state.value = nextState
         viewModelScope.launch {
+            // The completed state stays persisted (completedAtEpochMillis set) so
+            // the app knows onboarding is done. A real user-profile commit +
+            // draft clear (PRD OB-10) lands with the profile entity.
             drafts.save(nextState.draft)
-            if (effect != null) {
-                _effects.send(effect)
-                if (effect is OnboardingEffect.Completed) drafts.clear()
-            }
+            if (effect != null) _effects.send(effect)
         }
     }
 }
