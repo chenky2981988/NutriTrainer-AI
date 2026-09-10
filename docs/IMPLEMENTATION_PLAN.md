@@ -455,17 +455,21 @@ claims + store health declarations.
 
 - **UI tests** ✅ — `androidDeviceTest` wired (`compose ui-test-junit4` + androidx `ui-test-manifest` 1.11.2). `OnboardingHostUiTest` renders the real screen and drives clicks through the real reducer (3 tests). `./gradlew :shared:connectedAndroidDeviceTest` → 86 instrumented tests pass on device.
 
-### Next major piece — "learn a food as you go" (PRD §6 rank 1, §7 unknown-product workflow)
+### "Learn a food as you go" (PRD §6 rank 1, §7) ✅ Increment 1–2
 
-Today there is **no food directory** — only `SeedFoodResolver` (11 hardcoded foods). Unknown foods ("Provilac milk") are stored `UNRESOLVED` at 0 kcal. Target flow:
+- `Food` entity + `FoodRepository` + `FoodEntity.sq` + `SqlDelightFoodRepository`. `1.sqm` migration, schema v1 → v2.
+- `FoodResolver.resolve` is `suspend`; `CompositeFoodResolver` = user-confirmed first, then seed.
+- `AddUserFoodUseCase.add()` / `.addAndResolve()` — persist + re-resolve the pending entry so it flips from UNRESOLVED/0 kcal to counted; future logs resolve instantly.
+- Coach surfaces `pendingFood` → `AddFoodSheet` (name/brand/pack/basis/kcal+macros/"how much"); Library reworked (scrollable, "Your foods" + seed, expandable macro rows, "Add a food").
+- Device-verified end to end. 123 host + 86 device tests.
 
-1. `domain/model/Food` + `FoodRepository` + `foodEntity.sq` — persist user-confirmed foods.
-2. `FoodResolver` checks `FoodRepository` (user-confirmed, `VERY_HIGH`) **before** the seed table — PRD source precedence rank 1.
-3. Coach: an unresolved item produces an actionable turn — "I couldn't find **X**. Add its nutrition?" — opening a manual form (name, basis per 100 g / ml / serving, kcal + macros, brand/pack).
-4. On save → `FoodRepository.upsert(userFood)` + in-place re-resolution of the pending `MealItem` (CORRECT-style) so it now counts.
-5. Fast-follow: `LabelOcr` expect/actual (ML Kit Text Recognition / Apple Vision) + photo picker → prefill the same form for confirmation.
+Remaining: `LabelOcr` expect/actual (ML Kit / Apple Vision) + photo picker → prefill the form; persist `pendingFood` / add a "resolve" action on unresolved Today rows across restarts.
 
-Then: the real content pipeline (Open Food Facts live + USDA / IFCT bulk imports, §7), on-device engines (Gemini Nano / Apple Foundation Models behind `NutritionLanguageEngine`), remaining entities + `.sqm` migrations, real navigation lib, deeper Progress/Library/Coach UI, a committed user-profile entity (draft-clear on OB-10).
+### Next — richer nutrient model (the user asked for amino acids, fat breakdown, micros)
+
+`NutrientVector` currently holds kcal/kJ + protein/carb/fat/fibre only. Expand to: sugars, added sugars, saturated / mono / poly / trans fat, sodium, cholesterol, key micros (iron, calcium, B12, vitamin D…), and an optional per-food amino-acid profile. This touches the schema (new columns / a `nutrient_detail` table), `NutritionMath` scaling, the resolver DTO, `AddFoodSheet`, and every nutrient display. Needs its own migration + a "show all" food-detail view.
+
+Then: the real content pipeline (Open Food Facts live + USDA / IFCT bulk imports, §7), on-device engines (Gemini Nano / Apple Foundation Models behind `NutritionLanguageEngine`), remaining entities, real navigation lib, deeper Progress/Coach UI, a committed user-profile entity (draft-clear on OB-10).
 
 ---
 
