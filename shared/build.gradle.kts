@@ -104,6 +104,14 @@ kotlin {
         getByName("androidHostTest").dependencies {
             implementation(libs.sqldelight.sqlite.driver)
         }
+        // Instrumented Compose UI tests (run on a device/emulator).
+        getByName("androidDeviceTest").dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.compose.uiTestJUnit4)
+            implementation(libs.androidx.compose.uiTestManifest)
+            implementation(libs.androidx.testExt.junit)
+            implementation(libs.androidx.test.runner)
+        }
     }
 }
 
