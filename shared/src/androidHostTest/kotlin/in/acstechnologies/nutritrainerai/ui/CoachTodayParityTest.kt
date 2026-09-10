@@ -70,7 +70,7 @@ class CoachTodayParityTest {
             override suspend fun lookupByBarcode(barcode: String): FoodSearchResult? = null
         }
         val coach = CoachViewModel(DeterministicNutritionParser(), log, addUserFood, noOnline, observe, day)
-        val today = TodayViewModel(observe, day)
+        val today = TodayViewModel(observe, mealLog, day, now = { 1_000L })
     }
 
     private fun rice(grams: Double) =

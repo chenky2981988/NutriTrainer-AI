@@ -67,4 +67,10 @@ class SqlDelightMealLogRepository(
             queries.softDelete(deletedAtEpochMillis = atEpochMillis, id = id)
         }
     }
+
+    override suspend fun restore(id: String) {
+        withContext(ioContext) {
+            queries.restore(id = id)
+        }
+    }
 }

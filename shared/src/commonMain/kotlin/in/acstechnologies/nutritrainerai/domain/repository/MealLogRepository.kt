@@ -23,4 +23,7 @@ interface MealLogRepository {
 
     /** Soft-delete with undo (PRD FR07); bumps the row's revision. */
     suspend fun softDelete(id: String, atEpochMillis: Long)
+
+    /** Undo a [softDelete] — clears the delete marker; bumps the row's revision (PRD FR07). */
+    suspend fun restore(id: String)
 }

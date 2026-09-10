@@ -69,6 +69,18 @@ class SqlDelightMealLogRepositoryTest {
     }
 
     @Test
+    fun restore_bringsBackASoftDeletedItem() = runTest {
+        val r = repo()
+        r.upsert(item("x"))
+        r.softDelete("x", atEpochMillis = 999)
+        r.restore("x")
+        val day = r.getDay(100)
+        assertEquals(listOf("x"), day.map { it.id })
+        // softDelete + restore each bump the revision (started at 1).
+        assertEquals(3, day.single().revision)
+    }
+
+    @Test
     fun observeDay_emitsCurrentState() = runTest {
         val r = repo()
         r.upsert(item("x"))

@@ -47,6 +47,7 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.KoinContext
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -125,8 +126,11 @@ private fun HomeScaffold(onRestartOnboarding: () -> Unit) {
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (tab) {
-                HomeTab.COACH -> CoachScreen(koinInject<CoachViewModel> { parametersOf(day) })
-                HomeTab.TODAY -> TodayScreen(koinInject<TodayViewModel> { parametersOf(day) })
+                // koinViewModel keeps these in the host ViewModelStore, so the Coach
+                // transcript and Today state survive tab switches (recreated only on
+                // process death — chat history persistence is a separate follow-up).
+                HomeTab.COACH -> CoachScreen(koinViewModel<CoachViewModel> { parametersOf(day) })
+                HomeTab.TODAY -> TodayScreen(koinViewModel<TodayViewModel> { parametersOf(day) })
                 HomeTab.PROGRESS -> ProgressScreen(day = day)
                 HomeTab.LIBRARY -> LibraryScreen()
                 HomeTab.PROFILE -> ProfileScreen(

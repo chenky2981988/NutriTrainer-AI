@@ -465,6 +465,24 @@ claims + store health declarations.
 
 Remaining: `LabelOcr` expect/actual (ML Kit / Apple Vision) + photo picker → prefill the form; persist `pendingFood` / add a "resolve" action on unresolved Today rows across restarts.
 
+### Online food lookup (Open Food Facts) ✅ priority 1
+
+- `OnlineFoodSource` port + `FoodSearchResult`; `OpenFoodFactsSource` (Ktor, `/cgi/search.pl` + `/api/v2/product`), fail-soft to empty. `INTERNET` permission; core still offline.
+- Wired into the `AddFoodSheet` (search box + tap-to-fill result cards + ODbL attribution) from both the Coach unknown-food prompt and Library → Add a food. `MockEngine` tests. Device-verified (Nutella search returned real OFF hits, tap prefilled macros).
+
+### Today delete + undo (PRD FR07) ✅
+
+- `MealLogRepository.restore(id)` + `restore:` query (no schema change). `TodayViewModel` gains `onIntent(TodayIntent.Delete/UndoDelete)` over `softDelete`/`restore`.
+- Each `MealRow` has a **Remove** button; deletes show a snackbar with **Undo**. Device-verified (row removed, totals held, Undo brought it back). 128 host tests.
+- `NutriApp` now resolves Coach/Today via `koinViewModel` (was `koinInject` on a Koin `factory`), so the **Coach transcript and Today state survive tab switches** (previously the factory handed back a fresh empty ViewModel each time). Recreated only on process death — chat-history persistence to the DB is still a follow-up.
+
+### Backlog from the "not happy with design" round (user, in order)
+
+1. Online lookup ✅ (above).
+2. **Region-specific search** — Open Food Facts should bias to the user's onboarding region: an Indian user searching "cow milk" should see Amul / Chitale / Gokul first. Use the country subdomain (`https://in.openfoodfacts.org/...`) or `countries_tags_en` / `tag` filter; thread the region from onboarding into `OnlineFoodSource.searchByName`.
+3. **Product images** — OFF `image_front_url` / `image_ingredients_url` / `image_nutrition_url`: thumbnail on each result card, then a tappable scrollable gallery (front, ingredients, nutrition-panel). Needs an image-loading lib (Coil 3 KMP) added.
+4. **Conversational Coach** — real chat bubbles (user right / coach left), inline clarifying questions, ASK/SUGGEST answers; persist the transcript so it survives process death, not just tab switches. Best with an on-device LLM.
+
 ### Next — richer nutrient model (the user asked for amino acids, fat breakdown, micros)
 
 `NutrientVector` currently holds kcal/kJ + protein/carb/fat/fibre only. Expand to: sugars, added sugars, saturated / mono / poly / trans fat, sodium, cholesterol, key micros (iron, calcium, B12, vitamin D…), and an optional per-food amino-acid profile. This touches the schema (new columns / a `nutrient_detail` table), `NutritionMath` scaling, the resolver DTO, `AddFoodSheet`, and every nutrient display. Needs its own migration + a "show all" food-detail view.

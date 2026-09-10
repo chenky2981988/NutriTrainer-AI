@@ -30,6 +30,10 @@
     <string name="today_consumed">Consumed</string>
     <string name="today_consumed_summary">%1$d kcal · %2$d g protein</string>
     <string name="today_planned_not_counted">Planned (not counted): %1$d kcal</string>
+    <string name="today_empty">Nothing logged yet. Tell the Coach what you ate.</string>
+    <string name="today_remove_item">Remove</string>
+    <string name="today_item_removed">Removed %1$s</string>
+    <string name="today_undo">Undo</string>
 
     <!-- Progress -->
     <string name="progress_title">Progress</string>

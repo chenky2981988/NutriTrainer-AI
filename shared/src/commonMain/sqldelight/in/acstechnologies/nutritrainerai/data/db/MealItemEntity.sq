@@ -48,3 +48,9 @@ softDelete:
 UPDATE mealItemEntity
 SET deletedAtEpochMillis = :deletedAtEpochMillis, revision = revision + 1
 WHERE id = :id;
+
+-- Undo a softDelete (PRD FR07). No schema change, so no migration needed.
+restore:
+UPDATE mealItemEntity
+SET deletedAtEpochMillis = NULL, revision = revision + 1
+WHERE id = :id;

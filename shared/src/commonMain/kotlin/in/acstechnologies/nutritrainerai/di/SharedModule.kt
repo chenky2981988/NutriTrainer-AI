@@ -110,7 +110,7 @@ val sharedModule: Module = module {
     factory { OnboardingViewModel(get()) }
 
     // Screen ViewModels take the day being viewed as a runtime parameter.
-    factory { (dayEpochDay: Long) -> TodayViewModel(get(), dayEpochDay) }
+    factory { (dayEpochDay: Long) -> TodayViewModel(get(), get(), dayEpochDay) }
     factory { (dayEpochDay: Long) ->
         CoachViewModel(get(DeterministicEngine), get(), get(), get(), get(), dayEpochDay)
     }
