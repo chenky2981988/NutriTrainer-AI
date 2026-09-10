@@ -1,0 +1,13 @@
+-- v2 -> v3: persist the Coach transcript (PRD §4.2).
+CREATE TABLE IF NOT EXISTS coachTurnEntity (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    dayEpochDay           INTEGER NOT NULL,
+    userText              TEXT NOT NULL,
+    understanding         TEXT NOT NULL,
+    result                TEXT NOT NULL,
+    observation           TEXT,
+    needsConfirmation     INTEGER NOT NULL DEFAULT 0,
+    createdAtEpochMillis   INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS coachTurnEntity_day ON coachTurnEntity(dayEpochDay);

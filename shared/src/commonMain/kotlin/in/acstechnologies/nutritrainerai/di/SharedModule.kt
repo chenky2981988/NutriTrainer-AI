@@ -3,6 +3,7 @@ package `in`.acstechnologies.nutritrainerai.di
 import `in`.acstechnologies.nutritrainerai.ai.NutritionLanguageEngine
 import `in`.acstechnologies.nutritrainerai.ai.parser.DeterministicNutritionParser
 import `in`.acstechnologies.nutritrainerai.ai.pipeline.LogParsedIntentUseCase
+import `in`.acstechnologies.nutritrainerai.data.coach.SqlDelightCoachTranscriptRepository
 import `in`.acstechnologies.nutritrainerai.data.food.OpenFoodFactsSource
 import `in`.acstechnologies.nutritrainerai.data.food.SqlDelightFoodRepository
 import `in`.acstechnologies.nutritrainerai.domain.repository.FoodRepository
@@ -29,6 +30,7 @@ import `in`.acstechnologies.nutritrainerai.data.measurement.SqlDelightMeasuremen
 import `in`.acstechnologies.nutritrainerai.data.onboarding.SqlDelightOnboardingDraftRepository
 import `in`.acstechnologies.nutritrainerai.data.settings.SqlDelightAppSettingsRepository
 import `in`.acstechnologies.nutritrainerai.domain.repository.AppSettingsRepository
+import `in`.acstechnologies.nutritrainerai.domain.repository.CoachTranscriptRepository
 import `in`.acstechnologies.nutritrainerai.domain.repository.MealLogRepository
 import `in`.acstechnologies.nutritrainerai.domain.repository.MeasurementRepository
 import `in`.acstechnologies.nutritrainerai.domain.repository.OnboardingDraftRepository
@@ -73,6 +75,7 @@ val sharedModule: Module = module {
     }
     single<AppSettingsRepository> { SqlDelightAppSettingsRepository(get(), Dispatchers.Default) }
     single<FoodRepository> { SqlDelightFoodRepository(get(), Dispatchers.Default) }
+    single<CoachTranscriptRepository> { SqlDelightCoachTranscriptRepository(get(), Dispatchers.Default) }
 
     // Online catalogue (Open Food Facts, PRD §7).
     single {
@@ -112,6 +115,15 @@ val sharedModule: Module = module {
     // Screen ViewModels take the day being viewed as a runtime parameter.
     factory { (dayEpochDay: Long) -> TodayViewModel(get(), get(), dayEpochDay) }
     factory { (dayEpochDay: Long) ->
-        CoachViewModel(get(DeterministicEngine), get(), get(), get(), get(), dayEpochDay)
+        CoachViewModel(
+            engine = get(DeterministicEngine),
+            logUseCase = get(),
+            addUserFood = get(),
+            onlineFoods = get(),
+            transcript = get(),
+            observeDay = get(),
+            dayEpochDay = dayEpochDay,
+            now = { Clock.System.now().toEpochMilliseconds() },
+        )
     }
 }

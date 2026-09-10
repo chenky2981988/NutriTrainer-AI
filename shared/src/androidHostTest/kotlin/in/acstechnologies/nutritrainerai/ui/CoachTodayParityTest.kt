@@ -2,6 +2,7 @@ package `in`.acstechnologies.nutritrainerai.ui
 
 import `in`.acstechnologies.nutritrainerai.ai.parser.DeterministicNutritionParser
 import `in`.acstechnologies.nutritrainerai.ai.pipeline.LogParsedIntentUseCase
+import `in`.acstechnologies.nutritrainerai.data.coach.SqlDelightCoachTranscriptRepository
 import `in`.acstechnologies.nutritrainerai.data.food.SqlDelightFoodRepository
 import `in`.acstechnologies.nutritrainerai.data.inMemoryNutriDb
 import `in`.acstechnologies.nutritrainerai.data.meallog.SqlDelightMealLogRepository
@@ -69,7 +70,10 @@ class CoachTodayParityTest {
             override suspend fun searchByName(query: String, limit: Int, countryCode: String?): List<FoodSearchResult> = emptyList()
             override suspend fun lookupByBarcode(barcode: String): FoodSearchResult? = null
         }
-        val coach = CoachViewModel(DeterministicNutritionParser(), log, addUserFood, noOnline, observe, day)
+        val transcript = SqlDelightCoachTranscriptRepository(db, Dispatchers.Unconfined)
+        val coach = CoachViewModel(
+            DeterministicNutritionParser(), log, addUserFood, noOnline, transcript, observe, day, now = { 1_000L },
+        )
         val today = TodayViewModel(observe, mealLog, day, now = { 1_000L })
     }
 

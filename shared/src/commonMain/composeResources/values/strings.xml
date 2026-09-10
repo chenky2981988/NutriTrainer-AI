@@ -24,6 +24,7 @@
     <string name="coach_kcal_so_far">%1$d kcal so far today</string>
     <string name="coach_composer_placeholder">What did you eat?</string>
     <string name="coach_you_prefix">You: %1$s</string>
+    <string name="coach_empty_hint">Tell me what you ate and I'll log it. Try "2 rotis and a bowl of dal".</string>
 
     <!-- Today -->
     <string name="today_title">Today</string>

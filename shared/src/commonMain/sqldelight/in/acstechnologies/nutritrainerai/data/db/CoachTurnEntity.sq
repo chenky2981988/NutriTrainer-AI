@@ -1,0 +1,31 @@
+import kotlin.Boolean;
+
+-- One Coach exchange, persisted so the transcript survives an app restart
+-- (PRD §4.2). Denormalised text only — the numbers live on mealItemEntity.
+CREATE TABLE coachTurnEntity (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    dayEpochDay           INTEGER NOT NULL,
+    userText              TEXT NOT NULL,
+    understanding         TEXT NOT NULL,
+    result                TEXT NOT NULL,
+    observation           TEXT,
+    needsConfirmation     INTEGER AS Boolean NOT NULL DEFAULT 0,
+    createdAtEpochMillis   INTEGER NOT NULL
+);
+
+CREATE INDEX coachTurnEntity_day ON coachTurnEntity(dayEpochDay);
+
+selectByDay:
+SELECT *
+FROM coachTurnEntity
+WHERE dayEpochDay = :dayEpochDay
+ORDER BY createdAtEpochMillis, id;
+
+insert:
+INSERT INTO coachTurnEntity(
+    dayEpochDay, userText, understanding, result, observation, needsConfirmation, createdAtEpochMillis
+)
+VALUES (:dayEpochDay, :userText, :understanding, :result, :observation, :needsConfirmation, :createdAtEpochMillis);
+
+deleteDay:
+DELETE FROM coachTurnEntity WHERE dayEpochDay = :dayEpochDay;

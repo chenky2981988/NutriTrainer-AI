@@ -10,8 +10,10 @@ import `in`.acstechnologies.nutritrainerai.ai.NutritionIntentValidator
 import `in`.acstechnologies.nutritrainerai.ai.NutritionLanguageEngine
 import `in`.acstechnologies.nutritrainerai.ai.pipeline.LogOutcome
 import `in`.acstechnologies.nutritrainerai.ai.pipeline.LogParsedIntentUseCase
+import `in`.acstechnologies.nutritrainerai.domain.model.CoachTurn
 import `in`.acstechnologies.nutritrainerai.domain.model.ConfidenceBand
 import `in`.acstechnologies.nutritrainerai.domain.model.FoodSearchResult
+import `in`.acstechnologies.nutritrainerai.domain.repository.CoachTranscriptRepository
 import `in`.acstechnologies.nutritrainerai.domain.repository.OnlineFoodSource
 import `in`.acstechnologies.nutritrainerai.domain.usecase.AddUserFoodUseCase
 import `in`.acstechnologies.nutritrainerai.domain.usecase.DayTotals
@@ -26,16 +28,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
-
-/** One exchange in the Coach transcript. Kept to PRD §4.2's four short beats. */
-data class CoachTurn(
-    val userText: String,
-    val understanding: String,
-    val result: String,
-    val observation: String? = null,
-    val nextAction: String? = null,
-    val needsConfirmation: Boolean = false,
-)
 
 /** A logged item the app couldn't identify — the user is asked to teach it. */
 data class PendingFood(
@@ -80,14 +72,20 @@ class CoachViewModel(
     private val logUseCase: LogParsedIntentUseCase,
     private val addUserFood: AddUserFoodUseCase,
     private val onlineFoods: OnlineFoodSource,
+    private val transcript: CoachTranscriptRepository,
     observeDay: ObserveDayUseCase,
     private val dayEpochDay: Long,
+    private val now: () -> Long,
 ) : ViewModel() {
 
     private val composer = MutableStateFlow("")
-    private val turns = MutableStateFlow<List<CoachTurn>>(emptyList())
     private val submitting = MutableStateFlow(false)
     private val pendingFood = MutableStateFlow<PendingFood?>(null)
+
+    /** Persisted transcript for the day — survives tab switches *and* restarts. */
+    private val turns: StateFlow<List<CoachTurn>> =
+        transcript.observeDay(dayEpochDay)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val dayTotals: StateFlow<DayTotals> =
         observeDay.observe(dayEpochDay)
@@ -121,7 +119,7 @@ class CoachViewModel(
         submitting.value = true
         viewModelScope.launch {
             try {
-                turns.update { it + runTurn(text) }
+                transcript.append(dayEpochDay, runTurn(text).copy(createdAtEpochMillis = now()))
             } finally {
                 submitting.value = false
             }
@@ -135,24 +133,23 @@ class CoachViewModel(
         viewModelScope.launch {
             try {
                 val updated = addUserFood.addAndResolve(pending.dayEpochDay, pending.mealItemId, details)
-                turns.update {
-                    it + if (updated != null) {
-                        CoachTurn(
-                            userText = "Added ${details.name}",
-                            understanding = "Saved ${details.name} to your foods",
-                            result = "+${updated.nutrients.energyKcal.roundToInt()} kcal · now counted",
-                            observation = "I'll recognise it next time.",
-                        )
-                    } else {
-                        CoachTurn(
-                            userText = "Added ${details.name}",
-                            understanding = "Saved ${details.name}",
-                            result = "—",
-                            observation = "Couldn't re-apply it to that entry; edit it in Today.",
-                            needsConfirmation = true,
-                        )
-                    }
+                val turn = if (updated != null) {
+                    CoachTurn(
+                        userText = "Added ${details.name}",
+                        understanding = "Saved ${details.name} to your foods",
+                        result = "+${updated.nutrients.energyKcal.roundToInt()} kcal · now counted",
+                        observation = "I'll recognise it next time.",
+                    )
+                } else {
+                    CoachTurn(
+                        userText = "Added ${details.name}",
+                        understanding = "Saved ${details.name}",
+                        result = "—",
+                        observation = "Couldn't re-apply it to that entry; edit it in Today.",
+                        needsConfirmation = true,
+                    )
                 }
+                transcript.append(pending.dayEpochDay, turn.copy(createdAtEpochMillis = now()))
             } finally {
                 submitting.value = false
             }
