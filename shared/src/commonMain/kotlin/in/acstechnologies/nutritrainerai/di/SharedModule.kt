@@ -7,9 +7,12 @@ import `in`.acstechnologies.nutritrainerai.data.db.NutriDb
 import `in`.acstechnologies.nutritrainerai.data.db.createNutriDb
 import `in`.acstechnologies.nutritrainerai.data.meallog.SqlDelightMealLogRepository
 import `in`.acstechnologies.nutritrainerai.data.measurement.SqlDelightMeasurementRepository
+import `in`.acstechnologies.nutritrainerai.data.onboarding.SqlDelightOnboardingDraftRepository
 import `in`.acstechnologies.nutritrainerai.domain.repository.MealLogRepository
 import `in`.acstechnologies.nutritrainerai.domain.repository.MeasurementRepository
+import `in`.acstechnologies.nutritrainerai.domain.repository.OnboardingDraftRepository
 import `in`.acstechnologies.nutritrainerai.domain.usecase.GetWeightTrendUseCase
+import `in`.acstechnologies.nutritrainerai.ui.onboarding.OnboardingViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.Json
 import org.koin.core.module.Module
@@ -43,6 +46,10 @@ val sharedModule: Module = module {
     // Data layer — DB work runs on the default dispatcher.
     single<MealLogRepository> { SqlDelightMealLogRepository(get(), Dispatchers.Default) }
     single<MeasurementRepository> { SqlDelightMeasurementRepository(get(), Dispatchers.Default) }
+    single<OnboardingDraftRepository> {
+        SqlDelightOnboardingDraftRepository(get(), get(), Dispatchers.Default)
+    }
 
     factory { GetWeightTrendUseCase(get()) }
+    factory { OnboardingViewModel(get()) }
 }

@@ -1,0 +1,18 @@
+-- A single-row draft of the onboarding answers, saved after every step so
+-- app termination never forces a restart (PRD §4.1.2). The row id is always
+-- 'current'; the payload is a serialised OnboardingState.
+CREATE TABLE onboardingDraftEntity (
+    id                    TEXT NOT NULL PRIMARY KEY,
+    json                  TEXT NOT NULL,
+    updatedAtEpochMillis  INTEGER NOT NULL
+);
+
+selectCurrent:
+SELECT json FROM onboardingDraftEntity WHERE id = 'current';
+
+upsertCurrent:
+INSERT OR REPLACE INTO onboardingDraftEntity(id, json, updatedAtEpochMillis)
+VALUES ('current', :json, :updatedAtEpochMillis);
+
+clearCurrent:
+DELETE FROM onboardingDraftEntity WHERE id = 'current';
