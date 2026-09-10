@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -18,10 +20,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import `in`.acstechnologies.nutritrainerai.domain.model.AgeBand
 import `in`.acstechnologies.nutritrainerai.domain.model.AnimalFood
+import `in`.acstechnologies.nutritrainerai.domain.model.BodyProfile
+import `in`.acstechnologies.nutritrainerai.domain.model.BodyUnits
 import `in`.acstechnologies.nutritrainerai.domain.model.FoodPattern
 import `in`.acstechnologies.nutritrainerai.domain.model.LanguageMode
 import `in`.acstechnologies.nutritrainerai.domain.model.OnboardingStep
@@ -34,8 +43,14 @@ import nutritrainerai.shared.generated.resources.action_continue
 import nutritrainerai.shared.generated.resources.ob_food_details_have_dairy
 import nutritrainerai.shared.generated.resources.ob_food_details_which
 import nutritrainerai.shared.generated.resources.ob_food_pattern_nonveg_note
+import nutritrainerai.shared.generated.resources.ob_age_band_label
+import nutritrainerai.shared.generated.resources.ob_body_units_label
+import nutritrainerai.shared.generated.resources.ob_height_cm
+import nutritrainerai.shared.generated.resources.ob_height_in
 import nutritrainerai.shared.generated.resources.ob_home_food_grains_label
 import nutritrainerai.shared.generated.resources.ob_home_food_optional_note
+import nutritrainerai.shared.generated.resources.ob_weight_kg
+import nutritrainerai.shared.generated.resources.ob_weight_lb
 import nutritrainerai.shared.generated.resources.ob_region_search
 import nutritrainerai.shared.generated.resources.ob_review_region_skipped
 import nutritrainerai.shared.generated.resources.ob_review_priority_note
@@ -265,6 +280,9 @@ private fun RegionContent(state: OnboardingUiState, onIntent: (OnboardingIntent)
     }
 }
 
+private const val IN_TO_CM = 2.54
+private const val LB_TO_KG = 0.453_592_37
+
 @Composable
 private fun GoalContent(state: OnboardingUiState, onIntent: (OnboardingIntent) -> Unit) {
     PrimaryGoal.entries.forEach { goal ->
@@ -273,6 +291,72 @@ private fun GoalContent(state: OnboardingUiState, onIntent: (OnboardingIntent) -
             onClick = { onIntent(OnboardingIntent.SetGoal(goal)) },
         ) { Text(stringResource(OnboardingCopy.goalLabel(goal))) }
     }
+
+    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+
+    val body = state.draft.bodyProfile
+    val update = { next: BodyProfile -> onIntent(OnboardingIntent.UpdateBodyProfile(next)) }
+
+    Text(stringResource(Res.string.ob_body_units_label), style = MaterialTheme.typography.labelLarge)
+    ChipFlow {
+        BodyUnits.entries.forEach { u ->
+            ToggleChip(
+                labelRes = OnboardingCopy.unitsLabel(u),
+                selected = body.units == u,
+                onToggle = { update(body.copy(units = u)) },
+            )
+        }
+    }
+
+    Text(stringResource(Res.string.ob_age_band_label), style = MaterialTheme.typography.labelLarge)
+    ChipFlow {
+        AgeBand.entries.forEach { ab ->
+            ToggleChip(
+                labelRes = OnboardingCopy.ageBandLabel(ab),
+                selected = body.ageBand == ab,
+                onToggle = { update(body.copy(ageBand = ab)) },
+            )
+        }
+    }
+
+    val imperial = body.units == BodyUnits.IMPERIAL
+    var heightText by remember(body.units) {
+        mutableStateOf(body.heightCm?.let { if (imperial) it / IN_TO_CM else it }?.let(::trimNumber) ?: "")
+    }
+    OutlinedTextField(
+        value = heightText,
+        onValueChange = {
+            heightText = it
+            val raw = it.toDoubleOrNull()
+            update(body.copy(heightCm = raw?.let { v -> if (imperial) v * IN_TO_CM else v }))
+        },
+        label = { Text(stringResource(if (imperial) Res.string.ob_height_in else Res.string.ob_height_cm)) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+
+    var weightText by remember(body.units) {
+        mutableStateOf(body.weightKg?.let { if (imperial) it / LB_TO_KG else it }?.let(::trimNumber) ?: "")
+    }
+    OutlinedTextField(
+        value = weightText,
+        onValueChange = {
+            weightText = it
+            val raw = it.toDoubleOrNull()
+            update(body.copy(weightKg = raw?.let { v -> if (imperial) v * LB_TO_KG else v }))
+        },
+        label = { Text(stringResource(if (imperial) Res.string.ob_weight_lb else Res.string.ob_weight_kg)) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+/** Up to 3 decimals, trailing zeros dropped. */
+private fun trimNumber(value: Double): String {
+    val rounded = kotlin.math.round(value * 1000) / 1000.0
+    return if (rounded % 1.0 == 0.0) rounded.toLong().toString() else rounded.toString()
 }
 
 @Composable

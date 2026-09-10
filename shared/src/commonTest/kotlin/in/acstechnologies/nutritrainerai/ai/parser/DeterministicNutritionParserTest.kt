@@ -152,6 +152,24 @@ class DeterministicNutritionParserTest {
         assertEquals(2.0, intent.items[2].quantity?.amount)
     }
 
+    @Test
+    fun runOnDescription_splitsAtAmountBoundariesIntoSeveralItems() = runTest {
+        // no "and"/"," separators — a real run-on log from device testing
+        val intent = parse("almond 5 boiled egg 2 white 30 g milk 250")
+        assertEquals(IntentKind.CONSUMED, intent.kind)
+        assertEquals(4, intent.items.size)
+        assertEquals(listOf("almond", "boiled egg", "white", "milk"), intent.items.map { it.foodName })
+        assertEquals(30.0, intent.items[2].quantity?.amount)
+        assertEquals("g", intent.items[2].quantity?.unit)
+        assertEquals(250.0, intent.items[3].quantity?.amount)
+    }
+
+    @Test
+    fun foodName_isCappedToLastFewWords() = runTest {
+        val intent = parse("some cooked spicy homemade paneer butter masala 200 g")
+        assertEquals("homemade paneer butter masala", intent.items.single().foodName)
+    }
+
     // --- degenerate input -----------------------------------------------------
 
     @Test

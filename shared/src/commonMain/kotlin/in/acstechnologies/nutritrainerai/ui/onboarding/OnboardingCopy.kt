@@ -1,11 +1,20 @@
 package `in`.acstechnologies.nutritrainerai.ui.onboarding
 
+import `in`.acstechnologies.nutritrainerai.domain.model.AgeBand
 import `in`.acstechnologies.nutritrainerai.domain.model.AnimalFood
+import `in`.acstechnologies.nutritrainerai.domain.model.BodyUnits
 import `in`.acstechnologies.nutritrainerai.domain.model.FoodPattern
 import `in`.acstechnologies.nutritrainerai.domain.model.LanguageMode
 import `in`.acstechnologies.nutritrainerai.domain.model.OnboardingStep
 import `in`.acstechnologies.nutritrainerai.domain.model.PrimaryGoal
 import nutritrainerai.shared.generated.resources.Res
+import nutritrainerai.shared.generated.resources.age_18_24
+import nutritrainerai.shared.generated.resources.age_25_34
+import nutritrainerai.shared.generated.resources.age_35_44
+import nutritrainerai.shared.generated.resources.age_45_54
+import nutritrainerai.shared.generated.resources.age_55_64
+import nutritrainerai.shared.generated.resources.age_65_plus
+import nutritrainerai.shared.generated.resources.age_under_18
 import nutritrainerai.shared.generated.resources.allergy_egg
 import nutritrainerai.shared.generated.resources.allergy_fish
 import nutritrainerai.shared.generated.resources.allergy_milk
@@ -60,6 +69,8 @@ import nutritrainerai.shared.generated.resources.ob_goal_helper
 import nutritrainerai.shared.generated.resources.ob_goal_title
 import nutritrainerai.shared.generated.resources.ob_home_food_helper
 import nutritrainerai.shared.generated.resources.ob_home_food_title
+import nutritrainerai.shared.generated.resources.ob_units_imperial
+import nutritrainerai.shared.generated.resources.ob_units_metric
 import nutritrainerai.shared.generated.resources.ob_region_helper
 import nutritrainerai.shared.generated.resources.ob_region_title
 import nutritrainerai.shared.generated.resources.ob_review_helper
@@ -127,6 +138,21 @@ internal object OnboardingCopy {
         LanguageMode.ENGLISH_ONLY -> Res.string.language_mode_english_only
         LanguageMode.ENGLISH_PLUS_REGIONAL -> Res.string.language_mode_english_plus
         LanguageMode.REGIONAL_ONLY -> Res.string.language_mode_regional_only
+    }
+
+    fun unitsLabel(u: BodyUnits): StringResource = when (u) {
+        BodyUnits.METRIC -> Res.string.ob_units_metric
+        BodyUnits.IMPERIAL -> Res.string.ob_units_imperial
+    }
+
+    fun ageBandLabel(a: AgeBand): StringResource = when (a) {
+        AgeBand.UNDER_18 -> Res.string.age_under_18
+        AgeBand.A18_24 -> Res.string.age_18_24
+        AgeBand.A25_34 -> Res.string.age_25_34
+        AgeBand.A35_44 -> Res.string.age_35_44
+        AgeBand.A45_54 -> Res.string.age_45_54
+        AgeBand.A55_64 -> Res.string.age_55_64
+        AgeBand.A65_PLUS -> Res.string.age_65_plus
     }
 
     /** id -> label resource. ids are stable; labels localise via strings.xml. */

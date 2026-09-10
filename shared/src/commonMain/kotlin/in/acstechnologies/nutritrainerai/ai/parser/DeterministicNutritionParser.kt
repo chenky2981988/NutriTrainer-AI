@@ -167,7 +167,35 @@ class DeterministicNutritionParser : NutritionLanguageEngine {
         body.split(EnglishLexicon.ITEM_SEPARATORS)
             .map { it.trim() }
             .filter { it.isNotEmpty() }
+            .flatMap { splitRunOn(it) }
             .mapNotNull { parseFragment(it, status, meal) }
+
+    /**
+     * Break a separator-less run-on like "almond 5 boiled egg 2 white 30g milk 250"
+     * at each `<amount> [unit]` boundary, so the fallback still produces several
+     * items instead of one blob. A fragment with fewer than two amounts is left
+     * as-is.
+     */
+    private fun splitRunOn(fragment: String): List<String> {
+        val tokens = tokensFor(fragment)
+        val amountIdx = tokens.indices.filter { i ->
+            tokens[i].toDoubleOrNull() != null || tokens[i] in EnglishLexicon.NUMBER_WORDS
+        }
+        if (amountIdx.size < 2) return listOf(fragment)
+
+        val chunks = mutableListOf<String>()
+        var start = 0
+        for (idx in amountIdx) {
+            var end = idx + 1
+            if (end < tokens.size && EnglishLexicon.UNIT_TOKENS.containsKey(tokens[end])) end++
+            chunks += tokens.subList(start, end).joinToString(" ")
+            start = end
+        }
+        if (start < tokens.size) {
+            chunks += tokens.subList(start, tokens.size).joinToString(" ")
+        }
+        return chunks.filter { it.isNotBlank() }
+    }
 
     private fun parseFragment(fragment: String, status: MealItemStatus, meal: MealSlot): ParsedItem? {
         val tokens = tokensFor(fragment)
@@ -195,7 +223,9 @@ class DeterministicNutritionParser : NutritionLanguageEngine {
             }
         }
 
-        val foodName = foodTokens.joinToString(" ").trim()
+        // Keep the last few words as the food name; long descriptive prefixes
+        // ("cooked … sprinkle on provilac milk") rarely carry the identity.
+        val foodName = foodTokens.takeLast(MAX_FOOD_NAME_WORDS).joinToString(" ").trim()
         if (foodName.isEmpty()) return null
 
         val quantity = when {
@@ -254,6 +284,7 @@ class DeterministicNutritionParser : NutritionLanguageEngine {
         !amountFromDigit || unit !in EXACT_UNITS
 
     private companion object {
+        const val MAX_FOOD_NAME_WORDS = 4
         val WHITESPACE = Regex("""\s+""")
         val EXACT_UNITS = setOf("g", "kg", "ml", "l")
         val LEADING_NOISE_BY_LENGTH = EnglishLexicon.LEADING_NOISE.sortedByDescending { it.length }

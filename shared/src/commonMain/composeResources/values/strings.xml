@@ -36,7 +36,7 @@
     <string name="progress_seven_day_avg">7-day weight average</string>
     <string name="progress_need_readings">Add a few readings to see your trend.</string>
     <string name="progress_kg">%1$s kg</string>
-    <string name="progress_weight_field">Today\'s weight (kg)</string>
+    <string name="progress_weight_field">Today's weight (kg)</string>
 
     <!-- Library -->
     <string name="library_title">Library</string>
@@ -73,7 +73,7 @@
     <string name="ob_welcome_benefit_3">Works fully offline. No account, no AI subscription for core tracking.</string>
 
     <string name="ob_food_pattern_title">Which foods do you eat?</string>
-    <string name="ob_food_pattern_helper">This is the one setting we can\'t skip — it keeps suggestions safe.</string>
+    <string name="ob_food_pattern_helper">This is the one setting we can't skip — it keeps suggestions safe.</string>
     <string name="ob_food_pattern_nonveg_note">Includes every vegetarian food. It does not mean every meal is non-veg.</string>
 
     <string name="ob_food_details_title">Any specifics?</string>
@@ -86,7 +86,7 @@
     <string name="ob_safety_allergies_label">Allergies (hard filter)</string>
     <string name="ob_safety_avoid_field">Foods I avoid (preference, not allergy)</string>
 
-    <string name="ob_region_title">Which region\'s food feels like home?</string>
+    <string name="ob_region_title">Which region's food feels like home?</string>
     <string name="ob_region_helper">This helps us recognise local names and portions. It does not limit what you can eat.</string>
     <string name="ob_region_search">Search state or union territory</string>
     <string name="zone_north">North</string>
@@ -107,10 +107,25 @@
 
     <string name="ob_goal_title">What are you here for?</string>
     <string name="ob_goal_helper">Pick one. You can change it any time.</string>
+    <string name="ob_body_units_label">Units</string>
+    <string name="ob_units_metric">Metric (kg, cm)</string>
+    <string name="ob_units_imperial">Imperial (lb, in)</string>
+    <string name="ob_age_band_label">Age band</string>
+    <string name="ob_height_cm">Height (cm)</string>
+    <string name="ob_height_in">Height (in)</string>
+    <string name="ob_weight_kg">Weight (kg) — optional</string>
+    <string name="ob_weight_lb">Weight (lb) — optional</string>
+    <string name="age_under_18">Under 18</string>
+    <string name="age_18_24">18–24</string>
+    <string name="age_25_34">25–34</string>
+    <string name="age_35_44">35–44</string>
+    <string name="age_45_54">45–54</string>
+    <string name="age_55_64">55–64</string>
+    <string name="age_65_plus">65+</string>
 
     <string name="ob_voice_title">Voice and language</string>
-    <string name="ob_voice_helper">Choose your app language, then the languages you\'ll log in.</string>
-    <string name="ob_voice_logging_label">Languages you\'ll log in</string>
+    <string name="ob_voice_helper">Choose your app language, then the languages you'll log in.</string>
+    <string name="ob_voice_logging_label">Languages you'll log in</string>
 
     <string name="ob_review_title">Does this look right?</string>
     <string name="ob_review_helper">Your food category always takes priority over regional suggestions.</string>

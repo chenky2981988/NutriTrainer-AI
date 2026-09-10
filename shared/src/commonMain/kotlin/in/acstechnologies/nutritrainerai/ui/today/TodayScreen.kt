@@ -16,7 +16,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import `in`.acstechnologies.nutritrainerai.domain.model.ConfidenceBand
 import `in`.acstechnologies.nutritrainerai.domain.model.MealItem
 import `in`.acstechnologies.nutritrainerai.domain.usecase.DayTotals
 import nutritrainerai.shared.generated.resources.Res
@@ -69,13 +71,19 @@ private fun TotalsCard(totals: DayTotals) {
 
 @Composable
 private fun MealRow(item: MealItem) {
+    val unresolved = item.confidence == ConfidenceBand.UNRESOLVED
     ElevatedCard(Modifier.fillMaxWidth()) {
         Row(
             Modifier.fillMaxWidth().padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Column {
-                Text(item.foodName, fontWeight = FontWeight.Medium)
+            Column(Modifier.weight(1f)) {
+                Text(
+                    item.foodName,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(
                     listOfNotNull(
                         item.quantityGrams?.let { "${it.roundToInt()} g" },
@@ -83,9 +91,17 @@ private fun MealRow(item: MealItem) {
                         item.confidence.name.lowercase().replace('_', ' '),
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            Text("${item.nutrients.energyKcal.roundToInt()} kcal")
+            Text(
+                text = if (unresolved) "—" else "${item.nutrients.energyKcal.roundToInt()} kcal",
+                maxLines = 1,
+                softWrap = false,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+            )
         }
     }
 }

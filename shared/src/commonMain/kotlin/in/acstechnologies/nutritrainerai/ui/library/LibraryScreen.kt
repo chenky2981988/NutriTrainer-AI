@@ -59,14 +59,16 @@ fun LibraryScreen() {
                 ElevatedCard(Modifier.fillMaxWidth()) {
                     Row(
                         Modifier.fillMaxWidth().padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        Text(food.canonicalName, fontWeight = FontWeight.Medium)
+                        Text(food.canonicalName, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                         Text(
                             stringResource(
                                 Res.string.library_kcal_per_100g,
                                 food.nutrientsPerBase.energyKcal.roundToInt(),
                             ),
+                            maxLines = 1,
+                            softWrap = false,
                         )
                     }
                 }

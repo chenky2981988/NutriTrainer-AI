@@ -73,7 +73,8 @@ fun ProgressScreen(day: Long) {
                         trend == null -> stringResource(Res.string.progress_need_readings)
                         else -> stringResource(
                             Res.string.progress_kg,
-                            ((trend ?: 0.0) * 10).roundToInt() / 10.0,
+                            // Keep up to 3 decimals; Double.toString() trims trailing zeros.
+                            ((trend ?: 0.0) * 1000).roundToInt() / 1000.0,
                         )
                     },
                     fontWeight = FontWeight.SemiBold,
