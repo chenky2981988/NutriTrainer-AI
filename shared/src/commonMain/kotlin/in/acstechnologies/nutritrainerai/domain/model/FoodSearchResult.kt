@@ -18,4 +18,17 @@ data class FoodSearchResult(
     val source: SourceType,
     /** Where it came from — kept for provenance / attribution (PRD §7). */
     val provenanceUrl: String? = null,
+    /** Small front-of-pack image for the result row, if the source has one. */
+    val thumbnailUrl: String? = null,
+    /** Full-size photos to browse on the detail view: front, ingredients, nutrition panel. */
+    val imageUrls: List<ProductImage> = emptyList(),
 )
+
+/** One product photo from an online source, tagged by what it shows. */
+@Serializable
+data class ProductImage(
+    val url: String,
+    val kind: ProductImageKind,
+)
+
+enum class ProductImageKind { FRONT, INGREDIENTS, NUTRITION }

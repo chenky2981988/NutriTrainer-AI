@@ -50,6 +50,8 @@
     <string name="library_add_food">Add a food</string>
     <string name="library_your_foods">Your foods</string>
     <string name="library_built_in">Built-in (seed)</string>
+    <string name="nutrient_energy">Energy</string>
+    <string name="nutrient_energy_kcal">%1$d kcal</string>
     <string name="nutrient_protein">Protein</string>
     <string name="nutrient_carbs">Carbs</string>
     <string name="nutrient_fat">Fat</string>
@@ -74,7 +76,14 @@
     <string name="addfood_save">Save food</string>
     <string name="addfood_cancel">Cancel</string>
     <string name="addfood_scan_hint">Label scanning (photo) comes next — enter it manually for now.</string>
-    <string name="addfood_found_online">Found online — tap to use</string>
+    <string name="addfood_found_online">Found online — tap for details</string>
+    <string name="addfood_use_this">Use this food</string>
+    <string name="addfood_detail_per">Per %1$s</string>
+    <string name="addfood_serving_line">Serving: %1$s g</string>
+    <string name="addfood_no_images">No product photos available</string>
+    <string name="addfood_image_front">Front of pack</string>
+    <string name="addfood_image_ingredients">Ingredients</string>
+    <string name="addfood_image_nutrition">Nutrition label</string>
     <string name="addfood_searching_online">Searching Open Food Facts…</string>
     <string name="addfood_online_search_hint">Search Open Food Facts</string>
     <string name="addfood_search_button">Search</string>

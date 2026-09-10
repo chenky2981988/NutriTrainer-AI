@@ -3,6 +3,8 @@ package `in`.acstechnologies.nutritrainerai.data.food
 import `in`.acstechnologies.nutritrainerai.domain.model.FoodSearchResult
 import `in`.acstechnologies.nutritrainerai.domain.model.MeasurementBasis
 import `in`.acstechnologies.nutritrainerai.domain.model.NutrientVector
+import `in`.acstechnologies.nutritrainerai.domain.model.ProductImage
+import `in`.acstechnologies.nutritrainerai.domain.model.ProductImageKind
 import `in`.acstechnologies.nutritrainerai.domain.model.SourceType
 import `in`.acstechnologies.nutritrainerai.domain.repository.OnlineFoodSource
 import io.ktor.client.HttpClient
@@ -65,7 +67,8 @@ class OpenFoodFactsSource(
     private companion object {
         const val WORLD = "https://world.openfoodfacts.org"
         const val USER_AGENT = "NutriTrainerAI/0.1 (offline-first nutrition app)"
-        const val FIELDS = "code,product_name,brands,quantity,serving_quantity,nutriments"
+        const val FIELDS = "code,product_name,brands,quantity,serving_quantity,nutriments," +
+            "image_front_url,image_front_small_url,image_ingredients_url,image_nutrition_url"
     }
 }
 
@@ -84,6 +87,10 @@ internal data class OffProduct(
     val brands: String? = null,
     @SerialName("serving_quantity") val servingQuantity: JsonPrimitive? = null,
     val nutriments: OffNutriments? = null,
+    @SerialName("image_front_url") val imageFrontUrl: String? = null,
+    @SerialName("image_front_small_url") val imageFrontSmallUrl: String? = null,
+    @SerialName("image_ingredients_url") val imageIngredientsUrl: String? = null,
+    @SerialName("image_nutrition_url") val imageNutritionUrl: String? = null,
 )
 
 @Serializable
@@ -115,5 +122,11 @@ internal fun OffProduct.toResult(): FoodSearchResult? {
         servingGrams = servingQuantity?.doubleOrNull,
         source = SourceType.OPEN_COMMUNITY,
         provenanceUrl = code?.let { "https://world.openfoodfacts.org/product/$it" },
+        thumbnailUrl = imageFrontSmallUrl ?: imageFrontUrl,
+        imageUrls = buildList {
+            imageFrontUrl?.let { add(ProductImage(it, ProductImageKind.FRONT)) }
+            imageIngredientsUrl?.let { add(ProductImage(it, ProductImageKind.INGREDIENTS)) }
+            imageNutritionUrl?.let { add(ProductImage(it, ProductImageKind.NUTRITION)) }
+        },
     )
 }

@@ -478,9 +478,9 @@ Remaining: `LabelOcr` expect/actual (ML Kit / Apple Vision) + photo picker → p
 
 ### Backlog from the "not happy with design" round (user, in order)
 
-1. Online lookup ✅ (above).
-2. **Region-specific search** — Open Food Facts should bias to the user's onboarding region: an Indian user searching "cow milk" should see Amul / Chitale / Gokul first. Use the country subdomain (`https://in.openfoodfacts.org/...`) or `countries_tags_en` / `tag` filter; thread the region from onboarding into `OnlineFoodSource.searchByName`.
-3. **Product images** — OFF `image_front_url` / `image_ingredients_url` / `image_nutrition_url`: thumbnail on each result card, then a tappable scrollable gallery (front, ingredients, nutrition-panel). Needs an image-loading lib (Coil 3 KMP) added.
+1. Online lookup ✅.
+2. Region-specific search ✅ — OFF country subdomain; "cow milk" → Chitale / Gokul / Amul.
+3. **Product images + detail view** ✅ — Coil 3 (KMP) + `coil-network-ktor3`, `ImageLoader` set in `NutriApp`. `FoodSearchResult` carries `thumbnailUrl` + `imageUrls: List<ProductImage>` (FRONT / INGREDIENTS / NUTRITION). Result rows show a thumbnail; tapping opens `OnlineFoodDetail` — a `HorizontalPager` gallery with Material dots + captions, the full macro table, ODbL line, and an explicit **Use this food**. Search only returns the front photo, so the detail view fetches the full product by barcode (`/api/v2/product`) to add the ingredients + nutrition-panel photos. Device-verified: Amul Taaza shows the readable nutrition-label photo on page 2.
 4. **Conversational Coach** — real chat bubbles (user right / coach left), inline clarifying questions, ASK/SUGGEST answers; persist the transcript so it survives process death, not just tab switches. Best with an on-device LLM.
 
 ### Next — richer nutrient model (the user asked for amino acids, fat breakdown, micros)

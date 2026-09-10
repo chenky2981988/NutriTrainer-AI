@@ -1,6 +1,7 @@
 package `in`.acstechnologies.nutritrainerai.data.food
 
 import `in`.acstechnologies.nutritrainerai.domain.model.MeasurementBasis
+import `in`.acstechnologies.nutritrainerai.domain.model.ProductImageKind
 import `in`.acstechnologies.nutritrainerai.domain.model.SourceType
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -45,6 +46,9 @@ class OpenFoodFactsSourceTest {
         {"products":[
           {"code":"8901234","product_name":"Provilac Full Cream Milk","brands":"Provilac, Dairy",
            "serving_quantity":200,
+           "image_front_url":"https://img.off/front.400.jpg",
+           "image_front_small_url":"https://img.off/front.200.jpg",
+           "image_nutrition_url":"https://img.off/nutrition.400.jpg",
            "nutriments":{"energy-kcal_100g":63.0,"proteins_100g":3.3,"carbohydrates_100g":4.7,"fat_100g":3.5,"fiber_100g":0.0}},
           {"product_name":"","nutriments":{"energy-kcal_100g":10.0}},
           {"product_name":"No nutriments here"}
@@ -63,6 +67,11 @@ class OpenFoodFactsSourceTest {
         assertEquals(200.0, r.servingGrams)
         assertEquals(SourceType.OPEN_COMMUNITY, r.source)
         assertTrue(r.provenanceUrl!!.endsWith("/product/8901234"))
+        assertEquals("https://img.off/front.200.jpg", r.thumbnailUrl)
+        assertEquals(
+            listOf(ProductImageKind.FRONT, ProductImageKind.NUTRITION),
+            r.imageUrls.map { it.kind },
+        )
     }
 
     @Test

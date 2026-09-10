@@ -4,12 +4,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -26,10 +29,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import `in`.acstechnologies.nutritrainerai.domain.model.FoodSearchResult
 import `in`.acstechnologies.nutritrainerai.domain.model.MeasurementBasis
 import `in`.acstechnologies.nutritrainerai.domain.model.NutrientVector
@@ -99,6 +106,7 @@ fun AddFoodSheet(
     var amount by remember { mutableStateOf(if (prefillAmount > 0) trim(prefillAmount) else "") }
     var unit by remember { mutableStateOf(prefillUnit.ifBlank { "g" }) }
     var onlineQuery by remember { mutableStateOf(prefillName) }
+    var detail by remember { mutableStateOf<FoodSearchResult?>(null) }
 
     fun applyResult(r: FoodSearchResult) {
         name = r.name
@@ -115,6 +123,18 @@ fun AddFoodSheet(
     val canSave = name.isNotBlank() &&
         kcal.toDoubleOrNull() != null &&
         (!showEntryAmount || amount.toDoubleOrNull()?.let { it > 0 } == true)
+
+    detail?.let { picked ->
+        OnlineFoodDetail(
+            result = picked,
+            onUse = {
+                applyResult(it)
+                detail = null
+            },
+            onBack = { detail = null },
+        )
+        return
+    }
 
     Column(
         Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -149,13 +169,30 @@ fun AddFoodSheet(
         if (onlineResults.isNotEmpty()) {
             Text(stringResource(Res.string.addfood_found_online), style = MaterialTheme.typography.labelLarge)
             onlineResults.forEach { r ->
-                ElevatedCard(onClick = { applyResult(r) }, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text(listOfNotNull(r.brand, r.name).joinToString(" · "), fontWeight = FontWeight.Medium)
-                        Text(
-                            stringResource(Res.string.addfood_result_kcal, r.nutrientsPerBase.energyKcal.roundToInt()),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
+                ElevatedCard(onClick = { detail = r }, modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        r.thumbnailUrl?.let { url ->
+                            AsyncImage(
+                                model = url,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                            )
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text(listOfNotNull(r.brand, r.name).joinToString(" · "), fontWeight = FontWeight.Medium)
+                            Text(
+                                stringResource(Res.string.addfood_result_kcal, r.nutrientsPerBase.energyKcal.roundToInt()),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     }
                 }
             }

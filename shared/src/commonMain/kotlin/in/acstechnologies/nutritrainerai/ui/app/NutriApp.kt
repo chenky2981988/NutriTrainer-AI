@@ -20,6 +20,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import coil3.ImageLoader
+import coil3.compose.setSingletonImageLoaderFactory
+import coil3.network.ktor3.KtorNetworkFetcherFactory
+import coil3.request.crossfade
 import `in`.acstechnologies.nutritrainerai.domain.model.OnboardingState
 import `in`.acstechnologies.nutritrainerai.domain.model.ThemePreference
 import `in`.acstechnologies.nutritrainerai.domain.repository.AppSettingsRepository
@@ -55,6 +59,13 @@ import kotlin.time.ExperimentalTime
 /** Whole-app root: theme, the onboarding gate, then the tabbed home. */
 @Composable
 fun NutriApp() {
+    // Coil loads product photos (Open Food Facts) over the shared Ktor stack.
+    setSingletonImageLoaderFactory { context ->
+        ImageLoader.Builder(context)
+            .components { add(KtorNetworkFetcherFactory()) }
+            .crossfade(true)
+            .build()
+    }
     KoinContext {
         val settings = koinInject<AppSettingsRepository>()
         val themePref by settings.themePreference().collectAsState(ThemePreference.DEFAULT)
