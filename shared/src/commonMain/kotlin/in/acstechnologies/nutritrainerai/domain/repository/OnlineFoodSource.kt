@@ -10,8 +10,19 @@ import `in`.acstechnologies.nutritrainerai.domain.model.FoodSearchResult
 interface OnlineFoodSource {
     val id: String
 
-    /** Best-effort free-text search. Returns an empty list on any failure. */
-    suspend fun searchByName(query: String, limit: Int = 8): List<FoodSearchResult>
+    /**
+     * Best-effort free-text search. Returns an empty list on any failure.
+     *
+     * [countryCode] is an ISO-3166 alpha-2 code (e.g. `"in"`) used to bias
+     * results toward products sold in the user's region — an Indian user
+     * searching "cow milk" should see Amul / Chitale / Gokul first. `null`
+     * lets the implementation fall back to its own default.
+     */
+    suspend fun searchByName(
+        query: String,
+        limit: Int = 8,
+        countryCode: String? = null,
+    ): List<FoodSearchResult>
 
     /** Exact product by GTIN/EAN barcode, or null. */
     suspend fun lookupByBarcode(barcode: String): FoodSearchResult?

@@ -66,7 +66,7 @@ class CoachTodayParityTest {
         )
         val noOnline = object : OnlineFoodSource {
             override val id = "none"
-            override suspend fun searchByName(query: String, limit: Int): List<FoodSearchResult> = emptyList()
+            override suspend fun searchByName(query: String, limit: Int, countryCode: String?): List<FoodSearchResult> = emptyList()
             override suspend fun lookupByBarcode(barcode: String): FoodSearchResult? = null
         }
         val coach = CoachViewModel(DeterministicNutritionParser(), log, addUserFood, noOnline, observe, day)

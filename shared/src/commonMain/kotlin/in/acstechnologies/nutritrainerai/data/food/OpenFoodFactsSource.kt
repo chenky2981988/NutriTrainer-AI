@@ -23,15 +23,21 @@ import kotlinx.serialization.json.doubleOrNull
  */
 class OpenFoodFactsSource(
     private val client: HttpClient,
+    /** Region used when a call doesn't pass one. The app is India-first (PRD §1). */
+    private val defaultCountryCode: String? = "in",
 ) : OnlineFoodSource {
 
     override val id: String = "open-food-facts"
 
-    override suspend fun searchByName(query: String, limit: Int): List<FoodSearchResult> {
+    override suspend fun searchByName(query: String, limit: Int, countryCode: String?): List<FoodSearchResult> {
         val q = query.trim()
         if (q.isBlank()) return emptyList()
+        // OFF ranks by the country subdomain: in.openfoodfacts.org surfaces
+        // products actually sold in India ahead of global ones.
+        val cc = (countryCode ?: defaultCountryCode)?.trim()?.lowercase()?.takeIf { it.length == 2 }
+        val host = cc?.let { "https://$it.openfoodfacts.org" } ?: WORLD
         return runCatching {
-            val resp: OffSearchResponse = client.get("$BASE/cgi/search.pl") {
+            val resp: OffSearchResponse = client.get("$host/cgi/search.pl") {
                 parameter("search_terms", q)
                 parameter("search_simple", 1)
                 parameter("action", "process")
@@ -48,7 +54,7 @@ class OpenFoodFactsSource(
         val code = barcode.trim()
         if (code.isBlank()) return null
         return runCatching {
-            val resp: OffProductResponse = client.get("$BASE/api/v2/product/$code.json") {
+            val resp: OffProductResponse = client.get("$WORLD/api/v2/product/$code.json") {
                 parameter("fields", FIELDS)
                 header(HttpHeaders.UserAgent, USER_AGENT)
             }.body()
@@ -57,7 +63,7 @@ class OpenFoodFactsSource(
     }
 
     private companion object {
-        const val BASE = "https://world.openfoodfacts.org"
+        const val WORLD = "https://world.openfoodfacts.org"
         const val USER_AGENT = "NutriTrainerAI/0.1 (offline-first nutrition app)"
         const val FIELDS = "code,product_name,brands,quantity,serving_quantity,nutriments"
     }

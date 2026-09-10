@@ -18,8 +18,15 @@ import kotlin.test.assertTrue
 
 class OpenFoodFactsSourceTest {
 
-    private fun source(body: String, status: Int = 200): OpenFoodFactsSource {
-        val engine = MockEngine {
+    private val requestedUrls = mutableListOf<String>()
+
+    private fun source(
+        body: String,
+        status: Int = 200,
+        defaultCountryCode: String? = "in",
+    ): OpenFoodFactsSource {
+        val engine = MockEngine { request ->
+            requestedUrls += request.url.toString()
             respond(
                 content = body,
                 status = io.ktor.http.HttpStatusCode.fromValue(status),
@@ -29,7 +36,7 @@ class OpenFoodFactsSourceTest {
         val client = HttpClient(engine) {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
         }
-        return OpenFoodFactsSource(client)
+        return OpenFoodFactsSource(client, defaultCountryCode)
     }
 
     @Test
@@ -68,6 +75,23 @@ class OpenFoodFactsSourceTest {
         assertEquals("Amul Paneer", r.name)
         assertEquals(296.0, r.nutrientsPerBase.energyKcal)
         assertEquals(0.0, r.nutrientsPerBase.carbohydrateG) // missing -> 0
+    }
+
+    @Test
+    fun search_usesTheRegionSubdomain() = runTest {
+        val src = source("""{"products":[]}""", defaultCountryCode = "in")
+        src.searchByName("cow milk")
+        assertTrue(requestedUrls.single().startsWith("https://in.openfoodfacts.org/cgi/search.pl"))
+
+        requestedUrls.clear()
+        src.searchByName("cow milk", countryCode = "fr") // explicit overrides the default
+        assertTrue(requestedUrls.single().startsWith("https://fr.openfoodfacts.org/cgi/search.pl"))
+    }
+
+    @Test
+    fun search_fallsBackToWorldWhenNoRegion() = runTest {
+        source("""{"products":[]}""", defaultCountryCode = null).searchByName("cow milk")
+        assertTrue(requestedUrls.single().startsWith("https://world.openfoodfacts.org/cgi/search.pl"))
     }
 
     @Test
