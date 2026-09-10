@@ -25,9 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import `in`.acstechnologies.nutritrainerai.domain.model.ConfidenceBand
+import `in`.acstechnologies.nutritrainerai.domain.model.FoodSearchResult
 import `in`.acstechnologies.nutritrainerai.domain.model.NutrientVector
 import `in`.acstechnologies.nutritrainerai.domain.model.SourceType
 import `in`.acstechnologies.nutritrainerai.domain.repository.FoodRepository
+import `in`.acstechnologies.nutritrainerai.domain.repository.OnlineFoodSource
 import `in`.acstechnologies.nutritrainerai.domain.resolve.SeedFoodResolver
 import `in`.acstechnologies.nutritrainerai.domain.usecase.AddUserFoodUseCase
 import `in`.acstechnologies.nutritrainerai.ui.food.AddFoodSheet
@@ -68,10 +70,13 @@ fun LibraryScreen() {
     val seed = koinInject<SeedFoodResolver>()
     val foodRepo = koinInject<FoodRepository>()
     val addFood = koinInject<AddUserFoodUseCase>()
+    val online = koinInject<OnlineFoodSource>()
     val scope = rememberCoroutineScope()
 
     var query by remember { mutableStateOf("") }
     var showAdd by remember { mutableStateOf(false) }
+    var onlineResults by remember { mutableStateOf<List<FoodSearchResult>>(emptyList()) }
+    var onlineSearching by remember { mutableStateOf(false) }
 
     val userFoods by remember {
         foodRepo.observeAll().map { list ->
@@ -103,8 +108,21 @@ fun LibraryScreen() {
             onSave = {
                 scope.launch { addFood.add(it) }
                 showAdd = false
+                onlineResults = emptyList()
             },
-            onCancel = { showAdd = false },
+            onCancel = {
+                showAdd = false
+                onlineResults = emptyList()
+            },
+            onlineSearching = onlineSearching,
+            onlineResults = onlineResults,
+            onSearchOnline = { q ->
+                scope.launch {
+                    onlineSearching = true
+                    onlineResults = online.searchByName(q)
+                    onlineSearching = false
+                }
+            },
         )
         return
     }

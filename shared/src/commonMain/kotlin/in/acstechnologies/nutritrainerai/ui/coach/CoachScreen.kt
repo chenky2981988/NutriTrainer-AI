@@ -41,6 +41,8 @@ fun CoachScreen(viewModel: CoachViewModel) {
             prefillUnit = pending.guessedUnit,
             onSave = { viewModel.onIntent(CoachIntent.SubmitNewFood(it)) },
             onCancel = { viewModel.onIntent(CoachIntent.DismissAddFood) },
+            onlineSearching = pending.onlineSearching,
+            onlineResults = pending.onlineResults,
         )
     } else {
         CoachContent(state, viewModel::onIntent)

@@ -9,6 +9,8 @@ import `in`.acstechnologies.nutritrainerai.domain.calc.NutritionMath
 import `in`.acstechnologies.nutritrainerai.domain.model.NutrientVector
 import `in`.acstechnologies.nutritrainerai.domain.resolve.CompositeFoodResolver
 import `in`.acstechnologies.nutritrainerai.domain.resolve.QuantityResolver
+import `in`.acstechnologies.nutritrainerai.domain.model.FoodSearchResult
+import `in`.acstechnologies.nutritrainerai.domain.repository.OnlineFoodSource
 import `in`.acstechnologies.nutritrainerai.domain.resolve.SeedFoodResolver
 import `in`.acstechnologies.nutritrainerai.domain.usecase.AddUserFoodUseCase
 import `in`.acstechnologies.nutritrainerai.domain.usecase.ObserveDayUseCase
@@ -62,7 +64,12 @@ class CoachTodayParityTest {
             now = { 1_000L },
             idFactory = { "uf-${seq++}" },
         )
-        val coach = CoachViewModel(DeterministicNutritionParser(), log, addUserFood, observe, day)
+        val noOnline = object : OnlineFoodSource {
+            override val id = "none"
+            override suspend fun searchByName(query: String, limit: Int): List<FoodSearchResult> = emptyList()
+            override suspend fun lookupByBarcode(barcode: String): FoodSearchResult? = null
+        }
+        val coach = CoachViewModel(DeterministicNutritionParser(), log, addUserFood, noOnline, observe, day)
         val today = TodayViewModel(observe, day)
     }
 

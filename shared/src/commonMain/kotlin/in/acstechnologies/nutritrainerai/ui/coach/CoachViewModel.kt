@@ -11,6 +11,8 @@ import `in`.acstechnologies.nutritrainerai.ai.NutritionLanguageEngine
 import `in`.acstechnologies.nutritrainerai.ai.pipeline.LogOutcome
 import `in`.acstechnologies.nutritrainerai.ai.pipeline.LogParsedIntentUseCase
 import `in`.acstechnologies.nutritrainerai.domain.model.ConfidenceBand
+import `in`.acstechnologies.nutritrainerai.domain.model.FoodSearchResult
+import `in`.acstechnologies.nutritrainerai.domain.repository.OnlineFoodSource
 import `in`.acstechnologies.nutritrainerai.domain.usecase.AddUserFoodUseCase
 import `in`.acstechnologies.nutritrainerai.domain.usecase.DayTotals
 import `in`.acstechnologies.nutritrainerai.domain.usecase.NewFoodDetails
@@ -42,6 +44,8 @@ data class PendingFood(
     val guessedName: String,
     val guessedAmount: Double,
     val guessedUnit: String,
+    val onlineSearching: Boolean = false,
+    val onlineResults: List<FoodSearchResult> = emptyList(),
 )
 
 data class CoachUiState(
@@ -75,6 +79,7 @@ class CoachViewModel(
     private val engine: NutritionLanguageEngine,
     private val logUseCase: LogParsedIntentUseCase,
     private val addUserFood: AddUserFoodUseCase,
+    private val onlineFoods: OnlineFoodSource,
     observeDay: ObserveDayUseCase,
     private val dayEpochDay: Long,
 ) : ViewModel() {
@@ -184,7 +189,7 @@ class CoachViewModel(
         }
     }
 
-    /** First unresolved item of the log becomes the [PendingFood] prompt. */
+    /** First unresolved item of the log becomes the [PendingFood] prompt + an online search. */
     private fun queuePendingFood(outcome: LogOutcome, intent: NutritionIntent) {
         if (pendingFood.value != null) return
         val unresolved = outcome.created.firstOrNull { it.confidence == ConfidenceBand.UNRESOLVED } ?: return
@@ -195,7 +200,12 @@ class CoachViewModel(
             guessedName = unresolved.foodName,
             guessedAmount = parsed?.quantity?.amount ?: unresolved.quantityGrams ?: 1.0,
             guessedUnit = parsed?.quantity?.unit ?: "g",
+            onlineSearching = true,
         )
+        viewModelScope.launch {
+            val results = onlineFoods.searchByName(unresolved.foodName)
+            pendingFood.update { it?.copy(onlineSearching = false, onlineResults = results) }
+        }
     }
 
     private fun LogOutcome.toTurn(text: String, intent: NutritionIntent): CoachTurn {

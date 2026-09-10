@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Online food lookup (Open Food Facts). Core tracking still works offline. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".NutriApplication"
         android:allowBackup="true"

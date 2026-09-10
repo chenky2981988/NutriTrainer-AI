@@ -13,8 +13,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -24,8 +27,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import `in`.acstechnologies.nutritrainerai.domain.model.FoodSearchResult
 import `in`.acstechnologies.nutritrainerai.domain.model.MeasurementBasis
 import `in`.acstechnologies.nutritrainerai.domain.model.NutrientVector
 import `in`.acstechnologies.nutritrainerai.domain.usecase.NewFoodDetails
@@ -39,25 +44,32 @@ import nutritrainerai.shared.generated.resources.addfood_cancel
 import nutritrainerai.shared.generated.resources.addfood_entry_amount
 import nutritrainerai.shared.generated.resources.addfood_entry_label
 import nutritrainerai.shared.generated.resources.addfood_entry_unit
+import nutritrainerai.shared.generated.resources.addfood_found_online
 import nutritrainerai.shared.generated.resources.addfood_kcal
 import nutritrainerai.shared.generated.resources.addfood_name
+import nutritrainerai.shared.generated.resources.addfood_online_search_hint
 import nutritrainerai.shared.generated.resources.addfood_pack
+import nutritrainerai.shared.generated.resources.addfood_result_kcal
 import nutritrainerai.shared.generated.resources.addfood_save
 import nutritrainerai.shared.generated.resources.addfood_scan_hint
+import nutritrainerai.shared.generated.resources.addfood_search_button
+import nutritrainerai.shared.generated.resources.addfood_searching_online
 import nutritrainerai.shared.generated.resources.addfood_serving_grams
 import nutritrainerai.shared.generated.resources.addfood_title
 import nutritrainerai.shared.generated.resources.addfood_unknown_prompt
+import nutritrainerai.shared.generated.resources.addfood_via_off
 import nutritrainerai.shared.generated.resources.nutrient_carbs
 import nutritrainerai.shared.generated.resources.nutrient_fat
 import nutritrainerai.shared.generated.resources.nutrient_fibre
 import nutritrainerai.shared.generated.resources.nutrient_protein
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.roundToInt
 
 /**
- * Manual nutrition entry — the "teach the app a food" form (PRD §6 rank 1, §7
- * unknown-product workflow). Shared by Coach (re-resolving a pending entry) and
- * Library ([prefillName] null, [showEntryAmount] false). Photo/OCR prefill lands
- * on top of this later.
+ * Manual + online-assisted nutrition entry — the "teach the app a food" form
+ * (PRD §6 rank 1, §7). Online candidates (Open Food Facts) are shown first; the
+ * user picks one to prefill, or types it in. On save it becomes a [Food] in the
+ * library. Photo/OCR prefill lands on top of this later.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -68,6 +80,9 @@ fun AddFoodSheet(
     prefillUnit: String,
     onSave: (NewFoodDetails) -> Unit,
     onCancel: () -> Unit,
+    onlineSearching: Boolean = false,
+    onlineResults: List<FoodSearchResult> = emptyList(),
+    onSearchOnline: ((String) -> Unit)? = null,
 ) {
     var name by remember { mutableStateOf(prefillName) }
     var brand by remember { mutableStateOf("") }
@@ -83,6 +98,19 @@ fun AddFoodSheet(
     var fibre by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf(if (prefillAmount > 0) trim(prefillAmount) else "") }
     var unit by remember { mutableStateOf(prefillUnit.ifBlank { "g" }) }
+    var onlineQuery by remember { mutableStateOf(prefillName) }
+
+    fun applyResult(r: FoodSearchResult) {
+        name = r.name
+        brand = r.brand.orEmpty()
+        basis = r.basis
+        kcal = trim(r.nutrientsPerBase.energyKcal)
+        protein = trim(r.nutrientsPerBase.proteinG)
+        carbs = trim(r.nutrientsPerBase.carbohydrateG)
+        fat = trim(r.nutrientsPerBase.fatG)
+        fibre = trim(r.nutrientsPerBase.fibreG)
+        r.servingGrams?.let { servingGrams = trim(it) }
+    }
 
     val canSave = name.isNotBlank() &&
         kcal.toDoubleOrNull() != null &&
@@ -94,19 +122,54 @@ fun AddFoodSheet(
     ) {
         Text(stringResource(Res.string.addfood_title), style = MaterialTheme.typography.headlineSmall)
         if (prefillName.isNotBlank()) {
-            Text(
-                stringResource(Res.string.addfood_unknown_prompt, prefillName),
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Text(stringResource(Res.string.addfood_unknown_prompt, prefillName), style = MaterialTheme.typography.bodyMedium)
         }
 
+        // --- online lookup ---
+        if (onSearchOnline != null) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = onlineQuery,
+                    onValueChange = { onlineQuery = it },
+                    label = { Text(stringResource(Res.string.addfood_online_search_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                )
+                Button(onClick = { onSearchOnline(onlineQuery) }, enabled = onlineQuery.isNotBlank()) {
+                    Text(stringResource(Res.string.addfood_search_button))
+                }
+            }
+        }
+        if (onlineSearching) {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                CircularProgressIndicator(Modifier.padding(end = 8.dp), strokeWidth = 2.dp)
+                Text(stringResource(Res.string.addfood_searching_online), style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        if (onlineResults.isNotEmpty()) {
+            Text(stringResource(Res.string.addfood_found_online), style = MaterialTheme.typography.labelLarge)
+            onlineResults.forEach { r ->
+                ElevatedCard(onClick = { applyResult(r) }, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text(listOfNotNull(r.brand, r.name).joinToString(" · "), fontWeight = FontWeight.Medium)
+                        Text(
+                            stringResource(Res.string.addfood_result_kcal, r.nutrientsPerBase.energyKcal.roundToInt()),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            }
+            Text(stringResource(Res.string.addfood_via_off), style = MaterialTheme.typography.bodySmall)
+        }
+
+        // --- the form ---
         Field(stringResource(Res.string.addfood_name), name) { name = it }
         Field(stringResource(Res.string.addfood_brand), brand) { brand = it }
         Field(stringResource(Res.string.addfood_pack), pack) { pack = it }
 
         Text(stringResource(Res.string.addfood_basis), style = MaterialTheme.typography.labelLarge)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            BasisChip(Res.string.addfood_basis_100g.let { stringResource(it) }, basis == MeasurementBasis.PER_100_G) {
+            BasisChip(stringResource(Res.string.addfood_basis_100g), basis == MeasurementBasis.PER_100_G) {
                 basis = MeasurementBasis.PER_100_G
             }
             BasisChip(stringResource(Res.string.addfood_basis_100ml), basis == MeasurementBasis.PER_100_ML) {
@@ -137,7 +200,7 @@ fun AddFoodSheet(
         Text(stringResource(Res.string.addfood_scan_hint), style = MaterialTheme.typography.bodySmall)
 
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
                 Text(stringResource(Res.string.addfood_cancel))
             }
             Button(

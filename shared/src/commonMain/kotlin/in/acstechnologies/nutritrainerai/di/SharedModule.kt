@@ -3,8 +3,13 @@ package `in`.acstechnologies.nutritrainerai.di
 import `in`.acstechnologies.nutritrainerai.ai.NutritionLanguageEngine
 import `in`.acstechnologies.nutritrainerai.ai.parser.DeterministicNutritionParser
 import `in`.acstechnologies.nutritrainerai.ai.pipeline.LogParsedIntentUseCase
+import `in`.acstechnologies.nutritrainerai.data.food.OpenFoodFactsSource
 import `in`.acstechnologies.nutritrainerai.data.food.SqlDelightFoodRepository
 import `in`.acstechnologies.nutritrainerai.domain.repository.FoodRepository
+import `in`.acstechnologies.nutritrainerai.domain.repository.OnlineFoodSource
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.serialization.kotlinx.json.json
 import `in`.acstechnologies.nutritrainerai.domain.resolve.CompositeFoodResolver
 import `in`.acstechnologies.nutritrainerai.domain.resolve.FoodResolver
 import `in`.acstechnologies.nutritrainerai.domain.resolve.QuantityResolver
@@ -69,6 +74,14 @@ val sharedModule: Module = module {
     single<AppSettingsRepository> { SqlDelightAppSettingsRepository(get(), Dispatchers.Default) }
     single<FoodRepository> { SqlDelightFoodRepository(get(), Dispatchers.Default) }
 
+    // Online catalogue (Open Food Facts, PRD §7).
+    single {
+        HttpClient {
+            install(ContentNegotiation) { json(get()) }
+        }
+    }
+    single<OnlineFoodSource> { OpenFoodFactsSource(get()) }
+
     // Resolution + calculation pipeline (deterministic; no AI in the numbers).
     single { SeedFoodResolver() }
     // User-confirmed foods first (PRD §6 rank 1), then the seed table.
@@ -99,6 +112,6 @@ val sharedModule: Module = module {
     // Screen ViewModels take the day being viewed as a runtime parameter.
     factory { (dayEpochDay: Long) -> TodayViewModel(get(), dayEpochDay) }
     factory { (dayEpochDay: Long) ->
-        CoachViewModel(get(DeterministicEngine), get(), get(), get(), dayEpochDay)
+        CoachViewModel(get(DeterministicEngine), get(), get(), get(), get(), dayEpochDay)
     }
 }
